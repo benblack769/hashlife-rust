@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 rand = "0.8.3"
-
+typed-arena = "2.0.1"
+metrohash = "1.0.6"
