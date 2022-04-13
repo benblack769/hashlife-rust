@@ -67,16 +67,16 @@ def draw_board(dwg, group, pos, step):
 def make_css():
     n_svgs = 13
     delay = 0.5
-    perc_shown =  ((100/13)) # 8
+    perc_shown =  ((100/n_svgs)) # 8
     css_data = CLASS_CSS_STYLES + f'''
     @keyframes cf4FadeInOut {{
     0% {{
         opacity:1;
     }}
-    {perc_shown}% {{
+    {math.ceil(perc_shown)}% {{
         opacity:1;
     }}
-    {perc_shown+0.00001}% {{
+    {math.ceil(perc_shown)+1}% {{
         opacity:0;
     }}
     99.9999% {{

@@ -25,7 +25,7 @@ version = "0.1.0"
 dependencies = [
  "metrohash",
  "rand",
- "typed-arena",
+ "typed-arena-nomut",
 ]
 
 [[package]]
@@ -77,10 +77,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "typed-arena"
-version = "2.0.1"
+name = "typed-arena-nomut"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0685c84d5d54d1c26f7d3eb96cd41550adb97baed141a761cf335d3d33bcd0ae"
+checksum = "bfc9d8d4e8c94375df96d6ac01a18c263d3d529bc4a53a207580ae9bc30e87c1"
 
 [[package]]
 name = "wasi"

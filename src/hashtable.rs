@@ -1,6 +1,9 @@
-use std::hash::Hasher;
+#![feature(nll)]
 
-use typed_arena::Arena;
+use std::hash::Hasher;
+use std::mem::size_of;
+
+use typed_arena_nomut::Arena;
 
 use metrohash::MetroHash128;
 
@@ -14,6 +17,7 @@ struct HashNodeItem{
 struct HashNodeData<'a>{
     pub v: HashNodeItem,
     pub key_cached: u128,
+    pub forward_key: u128,
     pub next: Option<&'a HashNodeData<'a>>,
     pub set_count: u64,
 }
@@ -42,7 +46,6 @@ impl HashNodeItem{
 struct HashMapWPrior<'a>{
     pub table: Vec<Option<&'a HashNodeData<'a>>>,
     pub table_lastaccessed: Vec<u32>,
-    pub allocator: Arena<HashNodeData<'a>>,
     pub black_keys: Vec<u128>,
     pub lookup_mask: usize, 
     pub table_size_log2: u8,
@@ -64,28 +67,10 @@ impl<'a>  HashMapWPrior<'a>{
         HashMapWPrior{
             table: vec![None;init_size],
             table_lastaccessed: vec![0;init_size],
-            allocator: Arena::new(),
             black_keys: vec![BLACK_BASE],
             lookup_mask: init_mask,
             table_size_log2: init_size_pow2,
         }
-    }
-    fn grow(&mut self) -> HashMapWPrior<'a>{
-        let next_size_log2 = self.table_size_log2 + 1;
-        let next_size = self.table.len() * 2;
-        let next_mask = (self.lookup_mask << 1) | 1;
-        let next_map = HashMapWPrior{
-            table: vec![None;next_size],
-            table_lastaccessed: vec![0;next_size],
-            allocator: Arena::new(),
-            black_keys: self.black_keys.clone(),
-            lookup_mask: next_mask,
-            table_size_log2: next_size_log2,
-        };
-        for item in self.allocator.iter_mut(){
-            
-        }
-        next_map
     }
     fn black_key(&mut self, i:usize) -> u128{
         //cached method of retreiving the black key for a particular tree level
@@ -104,25 +89,57 @@ impl<'a>  HashMapWPrior<'a>{
             },
         }
     }
-    fn get(&mut self, key: u128)->HashNodeItem{
+    fn get(&self, key: u128)->&HashNodeData<'a>{
         let table_loc = (key as usize) & self.lookup_mask;
         match find_in_list(self.table[table_loc],key){
             None=>panic!("failed to find key in table!"),
-            Some(x)=>{
-                self.table_lastaccessed[table_loc] = 0;
-                x.v
-            },
+            Some(x)=>x,
         }
     }
-    fn add(&mut self, data: HashNodeItem){
-        
+    fn get_set_count(&self,d: &HashNodeItem)->u64{
+        [d.lt,d.lb,d.rt,d.rb].iter().map(|x|{
+            if d.is_raw(){
+                (*x as u64).count_ones() as u64
+            }
+            else{
+                self.get(*x).set_count
+            }
+        }).sum()
+    }
+    fn add(&mut self, item: &'a HashNodeData<'a>) -> u128{
+        let key = item.key_cached;
+        let table_idx = (key as usize) & self.lookup_mask;
+        self.table[table_idx] = Some(item);
+        self.table_lastaccessed[table_idx] = 0;
+        key
+    }
+    fn realloc<'b>(map: &'a mut HashMapWPrior<'a>, allocator: &'b Arena<HashNodeData<'b>>, next_size_log2:u8) -> HashMapWPrior<'b>{
+        let next_size = 1 << next_size_log2;
+        let next_mask = (!(0 as usize)) >> (8*(size_of::<usize>()) - (next_size_log2 as usize) - 1);
+        let mut next_map = HashMapWPrior{
+            table: vec![None;next_size],
+            table_lastaccessed: vec![0;next_size],
+            black_keys: map.black_keys.clone(),
+            lookup_mask: next_mask,
+            table_size_log2: next_size_log2,
+        };
+        for item in allocator.iter(){
+            let table_idx = (item.key_cached as usize) & next_map.lookup_mask;
+            next_map.table[table_idx] = Some(allocator.alloc(HashNodeData{
+                v: item.v,
+                key_cached: item.key_cached,
+                forward_key: item.forward_key,
+                next: None,
+                set_count: item.set_count,
+            }));
+        }
+        next_map
     }
 }
-
-fn find_key(){
-    let mut v: HashMapWPrior = HashMapWPrior::new();
+fn find_key<'a>(allocator: &'a Arena<HashNodeData<'a>>)->HashMapWPrior<'a>{
+    let mut v: HashMapWPrior= HashMapWPrior::new();
     v.table.resize(10, None);
-    v.allocator.alloc(HashNodeData{
+    let val:&'a HashNodeData<'a> = allocator.alloc(HashNodeData{
         v: HashNodeItem{
             lt: 0,
             lb: 0,
@@ -130,7 +147,23 @@ fn find_key(){
             rb: 0,
         },
         key_cached: 0,
+        forward_key: 0,
         next: None,
         set_count: 0,
     });
+    v.table[0] = Some(val);
+    let val2:&'a HashNodeData<'a> = allocator.alloc(HashNodeData{
+        v: HashNodeItem{
+            lt: 0,
+            lb: 0,
+            rt: 0,
+            rb: 0,
+        },
+        key_cached: 0,
+        forward_key: 0,
+        next: v.table[0],
+        set_count: 0,
+    });
+    v.table[0] = Some(val2);
+    v
 }
