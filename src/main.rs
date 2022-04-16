@@ -11,7 +11,8 @@ use std::assert;
 
 mod point;
 mod rle;
-mod hashtable;
+mod quadtree;
+mod largekey_table;
 
 pub use crate::point::Point;
 pub use crate::rle::*;
@@ -19,11 +20,11 @@ pub use crate::rle::*;
 fn life_forward_fn(
     sum:u8,
     curval:u8
-) -> u8{
-    if sum == 3{
+) -> u8 {
+    if sum == 3 {
         1
     }
-    else if sum == 4{
+    else if sum == 4 {
         curval
     }
     else{
@@ -46,6 +47,7 @@ fn step_forward_automata(prevmap: &[u8], nextmap: &mut [u8], xsize:usize, ysize:
         }
     }
 }
+
 fn calc_result_bitsize(sums:u64, orig_vals:u64)->u64{
     //can support either 8 bit or 4 bit packing
     let mask = 0x1111111111111111 as u64;
