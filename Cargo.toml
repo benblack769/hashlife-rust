@@ -9,3 +9,10 @@ edition = "2021"
 rand = "0.8.3"
 typed-arena-nomut = "0.1.0"
 metrohash = "1.0.6"
+
+[profile.release]
+opt-level = "z"  # Optimize for size.
+lto = true
+codegen-units = 1
+panic = "abort"
+

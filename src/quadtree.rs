@@ -202,7 +202,7 @@ fn pack_finished_bit4(data: [u64;16]) -> u64{
     let packed_inner_blocks = inner_blocks.map(pack_4bit_to_bits);
     unsafe{std::mem::transmute::<[u8; 8], u64>(packed_inner_blocks)}
 }
-fn step_forward_raw(d: QuadTreeValue, n_steps: u32) -> u128{
+fn step_forward_raw(d: QuadTreeValue, n_steps: u64) -> u128{
     let mut input_data = unpack_to_bit4(d);
     let mut operate_data = [0 as u64;16];
     for i in 0..n_steps{
@@ -232,32 +232,38 @@ impl TreeData{
                 (*x as u64).count_ones() as u64
             }
             else{
-                self.map.get(*x).set_count
+                self.map.get(*x).unwrap().set_count
             }
         }).sum()
     }
-    pub fn black_key(&mut self, depth:usize) -> u128{
+    pub fn black_key(&mut self, depth: usize) -> u128{
         self.black_key_cache.black_key(depth)
     }
-    pub fn step_forward(&mut self,d: QuadTreeValue, depth: u32, n_steps: u32) -> u128{
-        let key = d.key();
-        // if n_steps == 
-        let item = self.map.get(key);
-        {
-            Some(e)=>e.forward_key,
-            None=> {
-                if d.is_raw(){
-                    step_forward_raw(d, n_steps)
-                }
-                else{
-                    self.step_forward_recursive(d, n_steps)
-                }
-            }
+    fn step_forward_compute(&mut self,d: QuadTreeValue, depth: u64, n_steps: u64) -> u128{
+        if d.is_raw(){
+            assert_eq!(depth, 0);
+            step_forward_raw(d, n_steps)
+        }
+        else{
+            self.step_forward_recursive(d, depth, n_steps)
         }
     }
-    fn step_forward_recursive(&mut self,d: QuadTreeValue, n_steps: u32) -> u128{
-        let init_map = [d.lt,d.lb,d.rt,d.rb].map(|x|self.map.get(x).v);
-        let key_map = 
+
+    pub fn step_forward(&mut self,d: QuadTreeValue, depth: u64, n_steps: u64) -> u128{
+        let key = d.key();
+        let full_steps = 4<<depth;
+        let item = self.map.get(key);
+        if n_steps == full_steps && item.is_some() && item.unwrap().forward_key != NULL_KEY{
+            item.unwrap().forward_key
+        }
+        else{
+            self.step_forward_compute(d, depth, n_steps)
+        }
+    }
+    fn step_forward_recursive(&mut self,d: QuadTreeValue, depth: u64, n_steps: u64) -> u128{
+        let init_map = [d.lt,d.lb,d.rt,d.rb].map(|x|self.map.get(x).unwrap().v);
+        // let key_map = 
+        0
     }
     // fn step_forward_raw(d: QuadTreeValue) -> u128{
         

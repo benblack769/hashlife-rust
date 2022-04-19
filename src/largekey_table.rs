@@ -6,10 +6,6 @@ Perfect for lookups where the key
 is a hash.
 */
 
-use typed_arena_nomut::Arena;
-use std::cell::RefCell;
-use std::cell::Ref;
-
 
 #[derive(Clone,Copy)]
 struct HashNodeData<T:Copy>{
@@ -59,7 +55,7 @@ impl<T: Copy> LargeKeyTable<T>{
             if key == entry.key{
                 return Some(entry.value);
             }
-            else if key == self.null_key{
+            else if entry.key == self.null_key{
                 return None;
             }
             curkey >>= 1;
@@ -100,86 +96,30 @@ impl<T: Copy> LargeKeyTable<T>{
         self.insert_order.push(key);
         self._add(key, value);
     }
-    // pub fn add(&mut self, key: u128, value: T, alloc: &'a Arena<HashNodeData<T>>){
-    //     let table_idx = (key as usize) & self.lookup_mask;
-    //     self.table[table_idx] = Some(alloc.alloc(
-    //         HashNodeData{
-    //             key: key,
-    //             next: self.table[table_idx],
-    //             value: value,
-    //         }
-    //     ));
-    // } 
-    // pub fn grow(&mut self){
-    //     let next_size_log2 = self.table_size_log2 + 1;
-    //     let next_size = 1 << next_size_log2;
-    //     let next_mask = (!(0 as usize)) >> (8*(std::mem::size_of::<usize>()) - (next_size_log2 as usize) - 1);
-    //     let new_table:Vec<Option<&'a HashNodeData< T>>> = vec![None;next_size];
-    //     for table_row in self.table.iter() {
-    //         loop{
-    //             match table_row{
-    //                 None=>{break},
-    //                 Some(e)=>{
-    //                     let new_loc = (x.key as usize) & next_mask; 
-    //                     let next_entry = e.next;
-    //                     e.next = new_table[new_loc];
-    //                     new_table[new_loc] = Some(e);
-
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-    // pub fn get(&self, key: u128) -> Option<&'a T>{
-    //     match find_in_list(self.table[self.idx(key)], key){
-    //         Some(x)=> Some(&x.value),
-    //         None=>None,
-    //     }
+    // pub fn iter<'a>(&self) -> std::vec::Vec<u128>::Iter{
+    //     self.insert_order.iter()
     // }
 }
 
-// pub fn view< T>(alloc:&'a Arena<HashNodeData<T>>) -> Vec<&'a HashNodeData<T>>{
-//     let mut vec: Vec<&'a HashNodeData<T>> = Vec::with_capacity(alloc.len());
-//     for item in alloc.iter(){
-//         vec.push(item);
-//     }
-//     vec
-// }
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
 
-// impl<T>  DefaultHashMap<T>{
-//     pub fn new(next_size_log2:u8) -> DefaultHashMap<T>{
-//         DefaultHashMap{
-//             map: RefCell::new(LargeKeyTable::new(next_size_log2)),
-//             alloc: (Arena::new()),
-//             n_elements: RefCell::new(0 as usize),
-//         }
-//     }
-//     fn grow(&'a self){
-//         let mut map = self.map.borrow_mut();
-//         let next_size_log2 = map.table_size_log2+1;
-//         let next_size = 1 << next_size_log2;
-//         let next_mask = (!(0 as usize)) >> (8*(std::mem::size_of::<usize>()) - (next_size_log2 as usize) - 1);
-//         let mut new_table: Vec<Option<&'a HashNodeData<T>>> = vec![None;next_size];
-//         for node in self.alloc.iter_mut(){
-//             let loc = (node.key as usize) & next_mask;
-//             node.next = new_table[loc];
-//             new_table[loc] = Some(node);
-//         }
-//         map.table = new_table;
-//         map.table_size_log2 = next_size_log2;
-//         map.lookup_mask = next_mask;
-//     }
-//     pub fn add(&'a mut self, key: u128, value: T){
-//         if self.map.borrow().table.len() / 2 < *self.n_elements.borrow(){
-//             self.grow();
-//         }
-//         self.map.borrow_mut().add(key, value, &self.alloc);
-//         *self.n_elements.borrow_mut() += 1;
-//     }
-//     pub fn get(&self, key: u128) -> Option<&'a T>{
-//         self.map.borrow().get(key)
-//     }
-//     // pub fn iter(&self) -> typed_arena::IterMut<HashNodeData<T>>{
-//     //     self.alloc.borrow_mut().iter_mut()
-//     // }
-// }
+    #[test]
+    fn test_hash_insertions(){
+        let basekey:u128 = 0x8fab04dd8336fe8b33e4424a0d9e3e97;
+        let mut table: LargeKeyTable<i32> = LargeKeyTable::new(3, 0xcc, 0xccccccc);
+        const MAX_CHECK: usize = 5;
+        for i in 0..MAX_CHECK{
+            table.add(basekey+(i*i) as u128, i as i32);
+        }
+        let mut x = 0;
+        for j in 0..MAX_CHECK*MAX_CHECK{
+            assert_eq!(table.get(basekey+j as u128).is_some(), x*x == j);
+            if x*x == j{
+                x += 1;
+            }
+        }
+    }
+}
