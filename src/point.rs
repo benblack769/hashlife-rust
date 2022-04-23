@@ -1,5 +1,7 @@
 
 use std::cmp::Ordering;
+use std::ops;
+
 
 #[derive(Copy,Clone,Hash,PartialEq,Eq)]
 pub struct Point{
@@ -23,3 +25,14 @@ impl PartialOrd for Point {
     }
 }
 
+
+impl ops::Add<Point> for Point {
+    type Output = Point;
+
+    fn add(self, _rhs: Point) -> Point {
+        Point{
+            x:self.x + _rhs.x,
+            y:self.y + _rhs.y,
+        }
+    }
+}

@@ -15,11 +15,15 @@ struct HashNodeData<T:Copy>{
 
 pub struct LargeKeyTable<T: Copy>{
     table: Vec<HashNodeData<T>>,
-    insert_order: Vec<u128>,
+    n_elements: usize,
     null_value: T,
     null_key: u128,
     lookup_mask: usize, 
-    table_size_log2: u8,
+    pub table_size_log2: u8,
+}
+enum PossibleIdx {
+    Found(usize),
+    Empty(usize),
 }
 
 impl<T: Copy> LargeKeyTable<T>{
@@ -33,7 +37,7 @@ impl<T: Copy> LargeKeyTable<T>{
         };
         LargeKeyTable{
             table: vec![init_data;next_size],
-            insert_order: Vec::new(),
+            n_elements: 0,
             null_value: null_value,
             null_key: null_key,
             lookup_mask: next_mask,
@@ -46,59 +50,57 @@ impl<T: Copy> LargeKeyTable<T>{
             value: self.null_value,
         }
     }
-    pub fn get(&self, key: u128) -> Option<T>{
-        let mut curkey = key as u64;
-        let mut entry;
-        loop{
-            let idx = (curkey as usize) & self.lookup_mask;
-            entry = &self.table[idx];
+    fn get_idx(&self, key: u128) -> PossibleIdx{
+        let mut curkey = key;
+        let mut curoffset: usize = 0;
+        loop {
+            let idx = ((key as usize) + curoffset) & self.lookup_mask;
+            let entry = &self.table[idx];
             if key == entry.key{
-                return Some(entry.value);
+                return PossibleIdx::Found(idx);
             }
             else if entry.key == self.null_key{
-                return None;
+                return PossibleIdx::Empty(idx);
             }
-            curkey >>= 1;
+            curkey >>= 8;
+            curoffset += (curkey as usize) & 0xff;
         }
     }
-    fn _add(&mut self, key: u128, value: T){
-        let mut smallkey = key as usize;
-        let mut entry: &mut HashNodeData<T>;
-        loop{
-            let idx = smallkey & self.lookup_mask;
-            entry = &mut self.table[idx];
-            if self.null_key == entry.key{
-                break;
-            }
-            smallkey >>= 1;
+    pub fn get(&self, key: u128) -> Option<T>{
+        match self.get_idx(key){
+            PossibleIdx::Found(idx)=>Some(self.table[idx].value),
+            PossibleIdx::Empty(_)=>None
         }
-        *entry = HashNodeData{
-            key: key,
-            value: value,
-        };
     }
     fn _grow(&mut self){
         let mut new_table: LargeKeyTable<T> = LargeKeyTable::new(self.table_size_log2 + 1,self.null_key, self.null_value);
         for entry in self.table.iter(){
             if entry.key != self.null_key{
-                new_table._add(entry.key, entry.value);
+                new_table.add(entry.key, entry.value);
             }
         }
         self.table = new_table.table;
-        self.insert_order = new_table.insert_order;
+        self.n_elements = new_table.n_elements;
         self.lookup_mask = new_table.lookup_mask;
         self.table_size_log2 = new_table.table_size_log2;
     }
     pub fn add(&mut self, key: u128, value: T){
-        if self.insert_order.len() > self.table.len()/2{
-            self._grow();
+        match self.get_idx(key){
+            PossibleIdx::Found(idx)=>{
+                self.table[idx].value = value;
+            },
+            PossibleIdx::Empty(idx)=>{
+                if self.n_elements >= self.table.len()/2{
+                    self._grow();
+                }
+                self.n_elements += 1;
+                self.table[idx] = HashNodeData{
+                    key: key,
+                    value: value,
+                };
+            }
         }
-        self.insert_order.push(key);
-        self._add(key, value);
     }
-    // pub fn iter<'a>(&self) -> std::vec::Vec<u128>::Iter{
-    //     self.insert_order.iter()
-    // }
 }
 
 #[cfg(test)]
