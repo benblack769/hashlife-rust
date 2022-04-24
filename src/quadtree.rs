@@ -131,12 +131,12 @@ fn unpack_to_bit4(d: QuadTreeValue) -> [u64;16]{
     unsafe{std::mem::transmute::<[u32; 32], [u64;16]>(unpacked_i32s)}
 }
 fn get_inner_8x8(data: [u64;16])->[u32;8]{
-    let data_bytes = unsafe{std::mem::transmute::<[u64; 16], [u8;128]>(data)};
-    let mut inner_bytes = [0 as u8; 32];
+    let data_shorts = unsafe{std::mem::transmute::<[u64; 16], [u16;64]>(data)};
+    let mut inner_bytes = [0 as u16; 16];
     for y in 0..8{
-        inner_bytes[y*4..][0..4].clone_from_slice(&data_bytes[4+y*8..][2..6]);
+        inner_bytes[y*2..][0..2].clone_from_slice(&data_shorts[(4+y)*4..][1..3]);
     }
-    unsafe{std::mem::transmute::<[u8; 32], [u32;8]>(inner_bytes)}
+    unsafe{std::mem::transmute::<[u16; 16], [u32;8]>(inner_bytes)}
 }
 fn pack_finished_bit4(data: [u32;8]) -> u64{
     let packed_inner_blocks = data.map(pack_4bit_to_bits);
@@ -272,7 +272,7 @@ impl TreeData{
         let key = val.key();
         self.map.add(key, QuadTreeNode{
             v: val,
-            forward_key: key,
+            forward_key: NULL_KEY,
             set_count: self.get_set_count(&val),
         });
         key
@@ -298,7 +298,7 @@ impl TreeData{
         key == 0 || self.map.get(key).unwrap().set_count == 0
     }
     pub fn step_forward(&mut self, n_steps: u64){
-        while self.depth < 2{
+        while self.depth < 3{
             self.increase_depth();
         }
         let max_steps = 4 << (self.depth-1);
@@ -521,6 +521,81 @@ mod tests {
         step_forward_automata_16x16(&value_map,&mut out_value_map);
         assert_eq!(out_value_map, expected_out);
 
+    }
+    #[test]
+    fn test_step_forward_glider() {
+        let value_map:[u64;16] = [
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000010000000,
+            0x0000000001000000,
+            0x0000000111000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+        ];
+        let expected_out:[u64;16] = [
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000101000000,
+            0x0000000011000000,
+            0x0000000010000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+            0x0000000000000000,
+        ];
+        let mut out_value_map = [0 as u64;16];
+        step_forward_automata_16x16(&value_map,&mut out_value_map);
+        assert_eq!(out_value_map, expected_out);
+
+    }    
+    #[test]
+    fn test_get_inner_8() {
+        let map16x16:[u64;16] = [
+            0x1001110110011101,
+            0x1011110110111101,
+            0x1000110110001101,
+            0x1101110000000000,
+            0x1001010000000000,
+            0x1011010000000000,
+            0x1000110111001101,
+            0x1011010000000000,
+            0x1011010000000000,
+            0x1011010011001110,
+            0x1001110100000000,
+            0x1001010000000000,
+            0x1011010000000000,
+            0x1011010000000000,
+            0x1011110111001111,
+            0x1101110011001101,
+        ];
+        let expecteded_8x8:[u32;8] = [
+            0x01000000,
+            0x01000000,
+            0x11011100,
+            0x01000000,
+            0x01000000,
+            0x01001100,
+            0x11010000,
+            0x01000000,
+        ];
+        assert_eq!(get_inner_8x8(map16x16), expecteded_8x8);
     }
     #[test]
     fn test_cmprison(){

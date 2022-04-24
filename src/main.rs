@@ -38,10 +38,7 @@ fn main() {
     let contents = fs::read_to_string(in_filename).unwrap();
     let points = parse_fle_file(&contents);
     let mut tree = TreeData::gather_all_points(&points);
-    tree.step_forward(1);
-    // tree.step_forward(1);
-    // tree.step_forward(1);
-    // tree.step_forward(1);
+    tree.step_forward(50);
     let out_points = tree.dump_all_points();
     let rle_tot_str = write_rle(&out_points);
 
