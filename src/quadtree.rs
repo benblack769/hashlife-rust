@@ -1,9 +1,5 @@
-// #![feature(nll)]
-
 use std::hash::Hasher;
-use std::mem::size_of;
 
-use typed_arena_nomut::Arena;
 use crate::largekey_table::LargeKeyTable;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
@@ -65,9 +61,6 @@ impl QuadTreeValue{
         }
         res
     }
-    fn is_null(&self)->bool{
-        self.lt != NULL_KEY
-    }
     fn is_raw(&self)->bool{
         node_is_raw(self.lt)
     }
@@ -86,13 +79,12 @@ fn calc_result_bitsize(sums:u64, orig_vals:u64)->u64{
 }
 
 fn step_forward_automata_16x16(prevmap: &[u64;16], nextmap: &mut[u64;16]){
-    //masking by this row mask allows for 
+    //masking by this row makes sure that extra bits on end don't get set
     let rowmask = 0x0111111111111110 as u64;
     let summedmap = prevmap.map(|row|row + (row<<4) + (row>>4));
     for y in 1..(16-1){
         let csum = summedmap[y-1] + summedmap[y] + summedmap[y+1];
         let row_result = calc_result_bitsize(csum,prevmap[y]);
-        //println!("0x{:016x}    0x{:016x}", csum, row_result);
         nextmap[y] = row_result & rowmask;
     }
 }
@@ -103,17 +95,6 @@ const fn bits_to_4bit(x:u8)->u32{
     let q2 = (q4 | (q4 << 6)) &  0x03030303;
     let q1 = (q2 | (q2 << 3)) &  0x11111111;
     q1
-    // let mut result: u32 = 0;
-    // let mut v: u8 = x;
-    // let mut idx = 0;
-    // // `for` does not work in constant function as of 2021 stable release
-    // while idx < 8 {
-    //     result <<= 4;
-    //     result |= (v >> 7) as u32;
-    //     v <<= 1;
-    //     idx+= 1;
-    // }
-    // result
 }
 const fn generate_bit_to_4bit_mapping()->[u32;256]{
     let mut cached_map = [0 as u32;256];
@@ -126,9 +107,9 @@ const fn generate_bit_to_4bit_mapping()->[u32;256]{
     }
     cached_map
 }
-const bit4_mapping:[u32;256] = generate_bit_to_4bit_mapping();
+const BIT4_MAPPING:[u32;256] = generate_bit_to_4bit_mapping();
 fn to_4bit(x: u8) -> u32{
-    bits_to_4bit(x)//bit4_mapping[x as usize]
+    bits_to_4bit(x)//BIT4_MAPPING[x as usize]
 }
 fn pack_4bit_to_bits(x:u32)->u8{
     let g1 = x & 0x11111111;
@@ -149,24 +130,26 @@ fn unpack_to_bit4(d: QuadTreeValue) -> [u64;16]{
     let unpacked_i32s = blocked_bytes.map(to_4bit);
     unsafe{std::mem::transmute::<[u32; 32], [u64;16]>(unpacked_i32s)}
 }
-fn pack_finished_bit4(data: [u64;16]) -> u64{
+fn get_inner_8x8(data: [u64;16])->[u32;8]{
     let data_bytes = unsafe{std::mem::transmute::<[u64; 16], [u8;128]>(data)};
     let mut inner_bytes = [0 as u8; 32];
     for y in 0..8{
         inner_bytes[y*4..][0..4].clone_from_slice(&data_bytes[4+y*8..][2..6]);
     }
-    let inner_blocks = unsafe{std::mem::transmute::<[u8; 32], [u32;8]>(inner_bytes)};
-    let packed_inner_blocks = inner_blocks.map(pack_4bit_to_bits);
+    unsafe{std::mem::transmute::<[u8; 32], [u32;8]>(inner_bytes)}
+}
+fn pack_finished_bit4(data: [u32;8]) -> u64{
+    let packed_inner_blocks = data.map(pack_4bit_to_bits);
     unsafe{std::mem::transmute::<[u8; 8], u64>(packed_inner_blocks)}
 }
 fn step_forward_raw(d: QuadTreeValue, n_steps: u64) -> u128{
     let mut input_data = unpack_to_bit4(d);
     let mut operate_data = [0 as u64;16];
-    for i in 0..n_steps{
+    for _ in 0..n_steps{
         step_forward_automata_16x16(&input_data, &mut operate_data);
         input_data = operate_data;
     }
-    pack_finished_bit4(input_data) as u128
+    pack_finished_bit4(get_inner_8x8(input_data)) as u128
 }
 fn transpose_quad(in_map:&[u128;16])->[u128;16]{
     //transpose 2x2 quads (each of which are 2x2) into a 4x4 grid
@@ -208,18 +191,19 @@ pub struct TreeData{
 
 impl TreeData{
     fn new() -> TreeData{
-        const init_size_pow2: u8 = 1;
+        const INIT_SIZE_POW2: u8 = 1;
         const BLACK_BASE: u128 = 0;
-        // const BLACK_L1_VAL: QuadTreeValue = QuadTreeValue{lt:BLACK_BASE, lb:BLACK_BASE, rt: BLACK_BASE,rb:BLACK_BASE};
         let mut tree_data = TreeData{
-            map: LargeKeyTable::new(init_size_pow2,NULL_KEY,NULL_NODE),
+            map: LargeKeyTable::new(INIT_SIZE_POW2,NULL_KEY,NULL_NODE),
             black_keys: vec![BLACK_BASE],
             root: BLACK_BASE,
             depth: 0,
         };
-        // extend the tree so that increase_size can be called
+        // extend the tree so that increase_size() method can be called
         tree_data.root = tree_data.black_key(1);
         tree_data.depth = 1;
+        // call increase depth so that the tree is at very least depth 2, useful for proper recursion
+        tree_data.increase_depth();
         tree_data
     }
     fn black_key(&mut self, depth:usize) -> u128{
@@ -252,17 +236,17 @@ impl TreeData{
     }
     fn step_forward_compute(&mut self,d: QuadTreeValue, depth: u64, n_steps: u64) -> u128{
         if d.is_raw(){
-            assert_eq!(depth, 1);
+            assert_eq!(depth, 0);
             step_forward_raw(d, n_steps)
         }
         else{
-            assert_ne!(depth, 1);
+            assert_ne!(depth, 0);
             self.step_forward_compute_recursive(d, depth, n_steps)
         }
     }
 
     fn step_forward_rec(&mut self,d: QuadTreeValue, depth: u64, n_steps: u64) -> u128{
-        let full_steps = 2<<depth;
+        let full_steps = 4<<depth;
         assert!(n_steps <= full_steps, "num steps requested greater than full step, logic inaccurate");
         let key = d.key();
         let item = self.map.get(key);
@@ -293,7 +277,7 @@ impl TreeData{
         });
         key
     }
-    fn increase_depth(&mut self){
+    pub fn increase_depth(&mut self){
         let l1m = self.map.get(self.root).unwrap().v.to_array();
         let bkeyd1 = self.black_key((self.depth-1) as usize);
         let smap = [
@@ -317,23 +301,22 @@ impl TreeData{
         while self.depth < 2{
             self.increase_depth();
         }
-        let max_steps = 2 << (self.depth);
+        let max_steps = 4 << (self.depth-1);
         let cur_steps = std::cmp::min(max_steps, n_steps);
         let steps_left = n_steps - cur_steps;
         let init_map = self.map.get(self.root).unwrap().v.to_array().map(|x|self.map.get(x).unwrap().v.to_array());
         let arg_map = unsafe{std::mem::transmute::<[[u128;4]; 4], [u128;16]>(init_map)};
         let transposed_map = transpose_quad(&arg_map);
-        let black_key_d2 = self.black_key((self.depth-2) as usize);
         let has_white_on_border: bool = transposed_map.iter()
             .enumerate()
-            .filter(|(i,key)|is_on_4x4_border(*i))
-            .any(|(i,key)|!self.is_black(*key));
+            .filter(|(i,_)|is_on_4x4_border(*i))
+            .any(|(_,key)|!self.is_black(*key));
         if has_white_on_border{
             self.increase_depth();
             self.step_forward(n_steps);
         }
         else{
-            let newkey = self.step_forward_rec(self.map.get(self.root).unwrap().v, self.depth, cur_steps);
+            let newkey = self.step_forward_rec(self.map.get(self.root).unwrap().v, self.depth-1, cur_steps);
             self.root = newkey;
             self.depth -= 1;
             if steps_left != 0{
@@ -345,14 +328,14 @@ impl TreeData{
         let init_map = d.to_array().map(|x|self.map.get(x).unwrap().v.to_array());
         let arg_map = unsafe{std::mem::transmute::<[[u128;4]; 4], [u128;16]>(init_map)};
         let mut transposed_map = transpose_quad(&arg_map);
-        let next_iter_full_steps = 2<<(depth-1);
+        let next_iter_full_steps = 4<<(depth-1);
         for bt in 0..2{
             let dt = std::cmp::min(next_iter_full_steps as i64,std::cmp::max(0, n_steps as i64-next_iter_full_steps*bt)) as u64;
             let mut result = [0 as u128;16];
-            for i in 0..(3-bt){
-                for j in 0..(3-bt){
-                    let d1 = QuadTreeValue::from_array(&slice(&transposed_map, i as usize, j as usize));
-                    result[(i*4+j) as usize] = self.step_forward_rec(d1,depth-1,dt);                    
+            for x in 0..(3-bt){
+                for y in 0..(3-bt){
+                    let d1 = QuadTreeValue::from_array(&slice(&transposed_map, y as usize, x as usize));
+                    result[(y*4+x) as usize] = self.step_forward_rec(d1,depth-1,dt);                    
                 }
             }
             transposed_map = result;
@@ -389,7 +372,7 @@ impl TreeData{
     
     fn gather_points_recurive(&mut self, prev_map: &HashMap<Point, u128>, depth: usize) -> HashMap<Point, u128>{
         let mut map: HashMap<Point, u128> = HashMap::new();
-        for (oldp,oldkey) in prev_map.iter(){
+        for oldp in prev_map.keys(){
             let newp = parent_point(*oldp);
             match map.entry(newp){
                 //ignore the occupied case, as it means the value has already been filled
@@ -478,9 +461,6 @@ fn gather_raw_points(points: &Vec<Point>) -> HashMap<Point, u128>{
     }
     map
 }
-fn is_raw(x: u128) -> bool {
-    (x >> 64) == 0
-}
 fn parent_point(p:Point) -> Point {
     Point{x:p.x/2,y:p.y/2}
 }
@@ -493,81 +473,11 @@ fn child_points(p:Point) -> [Point;4] {
     ]
 }
 
-// fn gather_vecs(vec_locs: )
-// fn find_key<'a>(allocator: &'a Arena<HashNodeData<'a>>)->HashMapWPrior<'a>{
-//     let mut v: HashMapWPrior= HashMapWPrior::new();
-//     v.table.resize(10, None);
-//     let val:&'a HashNodeData<'a> = allocator.alloc(HashNodeData{
-//         v: HashNodeItem{
-//             lt: 0,
-//             lb: 0,
-//             rt: 0,
-//             rb: 0,
-//         },
-//         key_cached: 0,
-//         forward_key: 0,
-//         next: None,
-//         set_count: 0,
-//     });
-//     v.table[0] = Some(val);
-//     let val2:&'a HashNodeData<'a> = allocator.alloc(HashNodeData{
-//         v: HashNodeItem{
-//             lt: 0,
-//             lb: 0,
-//             rt: 0,
-//             rb: 0,
-//         },
-//         key_cached: 0,
-//         forward_key: 0,
-//         next: v.table[0],
-//         set_count: 0,
-//     });
-//     v.table[0] = Some(val2);
-//     v
-// }
-
-// fn find_key_def(){
-//     let allocator: Arena<HashNodeData> = Arena::new();
-//     let map = find_key(&allocator);
-// }
-
-
 
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-
-    fn life_forward_fn(
-        sum:u8,
-        curval:u8
-    ) -> u8 {
-        if sum == 3 {
-            1
-        }
-        else if sum == 4 {
-            curval
-        }
-        else{
-            0
-        }
-    }
-    
-    fn step_forward_automata(prevmap: &[u8], nextmap: &mut [u8], xsize:usize, ysize: usize){
-        for y in 1..(ysize-1){
-            let ymaps = [
-                &prevmap[((y-1)*xsize)..((y+0)*xsize)],
-                &prevmap[((y+0)*xsize)..((y+1)*xsize)],
-                &prevmap[((y+1)*xsize)..((y+2)*xsize)],
-            ];
-            //sums the first elements
-            for x in 1..(xsize-1){
-                let csum:u8 = ymaps.iter().map(|v|{let sr:u8 = v[(x-1)..(x+1+1)].iter().sum();sr}).sum();
-                let nextval = life_forward_fn(csum, ymaps[1][x]);
-                nextmap[y*xsize+x] = nextval;
-            }
-        }
-    }
     
     #[test]
     fn test_step_forward_16x16() {
@@ -609,10 +519,6 @@ mod tests {
         ];
         let mut out_value_map = [0 as u64;16];
         step_forward_automata_16x16(&value_map,&mut out_value_map);
-        // step_forward_automata(&u8_in_map,&mut u8_out_map, 8, 8);
-        // let u8_packed_out = unsafe {
-        //     std::mem::transmute::<[u64; 8], [u8;64]>(out_value_map)
-        // };
         assert_eq!(out_value_map, expected_out);
 
     }

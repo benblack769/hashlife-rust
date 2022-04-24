@@ -6,10 +6,7 @@
 
 use std::env;
 
-use std::panic;
-use std::cmp;
 use std::fs;
-use std::mem;
 use std::assert;
 
 mod point;
@@ -43,6 +40,8 @@ fn main() {
     let mut tree = TreeData::gather_all_points(&points);
     tree.step_forward(1);
     // tree.step_forward(1);
+    // tree.step_forward(1);
+    // tree.step_forward(1);
     let out_points = tree.dump_all_points();
     let rle_tot_str = write_rle(&out_points);
 
@@ -69,14 +68,17 @@ mod tests {
             "5bob2o$4bo6bo$3b2o3bo2bo$2obo5b2o$2obo5b2o$3b2o3bo2bo$4bo6bo$5bob2o!\n"
         );
         let expected = concat!(
-            "x = 0, y = 0, rule = B3/S23",
-            "5boboo$4bo7bo$3boo4bo3bo$oobo6boo$oobo6boo$3boo4bo3bo$4bo7bo$5boboo!"
+            "x = 0, y = 0, rule = B3/S23\n",
+            "5boboo$4bo7bo$3boo4bo3bo$oobo6boo$oobo6boo$3boo4bo3bo$4bo7bo$5boboo!\n"
         );
 
         let points = parse_fle_file(contents);
         let mut tree = TreeData::gather_all_points(&points);
+        tree.increase_depth();
+        tree.increase_depth();
         // tree.step_forward(1);
         let out_points = tree.dump_all_points();
         let rle_tot_str = write_rle(&out_points);
+        assert_eq!(expected, rle_tot_str);
     }
 }

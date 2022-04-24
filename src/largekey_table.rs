@@ -44,12 +44,6 @@ impl<T: Copy> LargeKeyTable<T>{
             table_size_log2: initial_capacity_log2,
         }
     }
-    fn null_entry(&self) -> HashNodeData<T>{
-        HashNodeData{
-            key: self.null_key,
-            value: self.null_value,
-        }
-    }
     fn get_idx(&self, key: u128) -> PossibleIdx{
         let mut curkey = key;
         let mut curoffset: usize = 0;
