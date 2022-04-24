@@ -191,7 +191,7 @@ fn slice(in_map:&[u128;16], x: usize, y: usize)->[u128;4]{
     let mut res = [0 as u128;4];
     for dy in 0..2{
         for dx in 0..2{
-            res[dy*2+dx] = in_map[(dy+y)*2+dx+x];
+            res[dy*2+dx] = in_map[(dy+y)*4+dx+x];
         }
     }
     res
@@ -252,11 +252,11 @@ impl TreeData{
     }
     fn step_forward_compute(&mut self,d: QuadTreeValue, depth: u64, n_steps: u64) -> u128{
         if d.is_raw(){
-            assert_eq!(depth, 0);
+            assert_eq!(depth, 1);
             step_forward_raw(d, n_steps)
         }
         else{
-            assert_ne!(depth, 0);
+            assert_ne!(depth, 1);
             self.step_forward_compute_recursive(d, depth, n_steps)
         }
     }
@@ -303,21 +303,31 @@ impl TreeData{
             bkeyd1, bkeyd1, bkeyd1, bkeyd1,
         ];
         let depth0map = [
-            self.add_array(slice(&smap, 0, 0)), self.add_array(slice(&smap, 0, 2)),
+            self.add_array(slice(&smap, 0, 0)), self.add_array(slice(&smap, 2, 0)),
             self.add_array(slice(&smap, 0, 2)), self.add_array(slice(&smap, 2, 2)),
         ];
         let newkey = self.add_array(depth0map);
         self.root = newkey;
         self.depth += 1;
     }
+    fn is_black(&self, key: u128)->bool{
+        key == 0 || self.map.get(key).unwrap().set_count == 0
+    }
     pub fn step_forward(&mut self, n_steps: u64){
+        while self.depth < 2{
+            self.increase_depth();
+        }
         let max_steps = 2 << (self.depth);
         let cur_steps = std::cmp::min(max_steps, n_steps);
         let steps_left = n_steps - cur_steps;
         let init_map = self.map.get(self.root).unwrap().v.to_array().map(|x|self.map.get(x).unwrap().v.to_array());
         let arg_map = unsafe{std::mem::transmute::<[[u128;4]; 4], [u128;16]>(init_map)};
+        let transposed_map = transpose_quad(&arg_map);
         let black_key_d2 = self.black_key((self.depth-2) as usize);
-        let has_white_on_border: bool = arg_map.iter().enumerate().filter(|(i,key)|is_on_4x4_border(*i)).any(|(i,key)|*key != black_key_d2);
+        let has_white_on_border: bool = transposed_map.iter()
+            .enumerate()
+            .filter(|(i,key)|is_on_4x4_border(*i))
+            .any(|(i,key)|!self.is_black(*key));
         if has_white_on_border{
             self.increase_depth();
             self.step_forward(n_steps);
@@ -326,7 +336,7 @@ impl TreeData{
             let newkey = self.step_forward_rec(self.map.get(self.root).unwrap().v, self.depth, cur_steps);
             self.root = newkey;
             self.depth -= 1;
-            if cur_steps != 0{
+            if steps_left != 0{
                 self.step_forward(steps_left);
             }
         }
@@ -337,7 +347,7 @@ impl TreeData{
         let mut transposed_map = transpose_quad(&arg_map);
         let next_iter_full_steps = 2<<(depth-1);
         for bt in 0..2{
-            let dt = std::cmp::min(next_iter_full_steps,n_steps-next_iter_full_steps*bt);
+            let dt = std::cmp::min(next_iter_full_steps as i64,std::cmp::max(0, n_steps as i64-next_iter_full_steps*bt)) as u64;
             let mut result = [0 as u128;16];
             for i in 0..(3-bt){
                 for j in 0..(3-bt){
@@ -409,10 +419,10 @@ impl TreeData{
     pub fn gather_all_points(points: &Vec<Point>)->TreeData{
         let mut cur_map = gather_raw_points(&points);
         let mut tree = TreeData::new();
-        let mut depth:u64 = 1;
+        let mut depth:u64 = 0;
         while cur_map.len() > 1{
-            cur_map = tree.gather_points_recurive(&cur_map, depth as usize);
             depth += 1;
+            cur_map = tree.gather_points_recurive(&cur_map, depth as usize);
         }
         tree.root = *cur_map.values().next().unwrap();
         tree.depth = depth;
@@ -420,7 +430,7 @@ impl TreeData{
     }
     
     fn dump_points_recursive(&self, root: u128, depth: u64, cur_loc: Point, cur_points: & mut Vec<Point>){
-        if depth == 1{
+        if depth == 0{
             assert!(node_is_raw(root));
             let mut cur_v = root as u64;
             for y in 0..8{
@@ -434,7 +444,7 @@ impl TreeData{
         }
         else{
             assert!(!node_is_raw(root));
-            let magnitude = 8<<(depth-2);
+            let magnitude = 8<<(depth-1);
             let subvalue = self.map.get(root).unwrap();
             if subvalue.set_count != 0{
                 for (i, subnode) in subvalue.v.to_array().iter().enumerate(){

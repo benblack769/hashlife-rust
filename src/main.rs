@@ -39,8 +39,9 @@ fn main() {
     let out_filename = &args[2];
 
     let contents = fs::read_to_string(in_filename).unwrap();
-    let points = parse_fle_file(contents);
+    let points = parse_fle_file(&contents);
     let mut tree = TreeData::gather_all_points(&points);
+    tree.step_forward(1);
     // tree.step_forward(1);
     let out_points = tree.dump_all_points();
     let rle_tot_str = write_rle(&out_points);
@@ -54,4 +55,28 @@ fn main() {
 
     fs::write(out_filename, rle_tot_str)
         .expect("failed to open output file for writing");
+}
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+ 
+    #[test]
+    fn test_load_dump_points() {
+        let contents = concat!(
+            "x = 12, y = 8, rule = B3/S23\n",
+            "5bob2o$4bo6bo$3b2o3bo2bo$2obo5b2o$2obo5b2o$3b2o3bo2bo$4bo6bo$5bob2o!\n"
+        );
+        let expected = concat!(
+            "x = 0, y = 0, rule = B3/S23",
+            "5boboo$4bo7bo$3boo4bo3bo$oobo6boo$oobo6boo$3boo4bo3bo$4bo7bo$5boboo!"
+        );
+
+        let points = parse_fle_file(contents);
+        let mut tree = TreeData::gather_all_points(&points);
+        // tree.step_forward(1);
+        let out_points = tree.dump_all_points();
+        let rle_tot_str = write_rle(&out_points);
+    }
 }

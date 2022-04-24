@@ -73,15 +73,14 @@ pub fn write_rle(points:& Vec<Point>) -> String{
     let mut s: String = String::new();
     s.push_str("x = 0, y = 0, rule = B3/S23\n");
     s.push_str(generate_rle_contents(points).as_str());
-    s = split_string_to_lines(s, 80);
-    return s;
+    return split_string_to_lines(&s, 80);
 }
 
 fn cdiv(x:i64, y: i64) -> i64{
     (x+y-1)/y
 }
 
-pub fn split_string_to_lines(ins: String, spacing:i64) -> String{
+pub fn split_string_to_lines(ins: &str, spacing:i64) -> String{
     let mut outs = String::new();
     for i in 0..(cdiv(ins.len() as i64,spacing)){
         let starti = i * spacing;
@@ -92,7 +91,7 @@ pub fn split_string_to_lines(ins: String, spacing:i64) -> String{
     return outs;
 }
 
-pub fn parse_fle_file(file_contents: String) -> Vec<Point> {
+pub fn parse_fle_file(file_contents: &str) -> Vec<Point> {
     let mut line_iter = file_contents.lines(); 
     // skips comments and metadata
     while let Some(line) = line_iter.next() {
