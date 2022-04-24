@@ -262,7 +262,7 @@ impl TreeData{
     }
 
     fn step_forward_rec(&mut self,d: QuadTreeValue, depth: u64, n_steps: u64) -> u128{
-        let full_steps = 4<<depth;
+        let full_steps = 2<<depth;
         assert!(n_steps <= full_steps, "num steps requested greater than full step, logic inaccurate");
         let key = d.key();
         let item = self.map.get(key);
@@ -311,7 +311,7 @@ impl TreeData{
         self.depth += 1;
     }
     pub fn step_forward(&mut self, n_steps: u64){
-        let max_steps = 4 << (self.depth-1);
+        let max_steps = 2 << (self.depth);
         let cur_steps = std::cmp::min(max_steps, n_steps);
         let steps_left = n_steps - cur_steps;
         let init_map = self.map.get(self.root).unwrap().v.to_array().map(|x|self.map.get(x).unwrap().v.to_array());
@@ -335,7 +335,7 @@ impl TreeData{
         let init_map = d.to_array().map(|x|self.map.get(x).unwrap().v.to_array());
         let arg_map = unsafe{std::mem::transmute::<[[u128;4]; 4], [u128;16]>(init_map)};
         let mut transposed_map = transpose_quad(&arg_map);
-        let next_iter_full_steps = 4<<(depth-1);
+        let next_iter_full_steps = 2<<(depth-1);
         for bt in 0..2{
             let dt = std::cmp::min(next_iter_full_steps,n_steps-next_iter_full_steps*bt);
             let mut result = [0 as u128;16];
@@ -388,7 +388,7 @@ impl TreeData{
                 Entry::Vacant(entry)=>{
                     let child_keys = child_points(newp).map(|childp|
                         match prev_map.get(&childp) {
-                            None=>self.black_key(depth),
+                            None=>self.black_key(depth-1),
                             Some(key)=>*key,
                         }
                     );
@@ -420,7 +420,7 @@ impl TreeData{
     }
     
     fn dump_points_recursive(&self, root: u128, depth: u64, cur_loc: Point, cur_points: & mut Vec<Point>){
-        if depth == 0{
+        if depth == 1{
             assert!(node_is_raw(root));
             let mut cur_v = root as u64;
             for y in 0..8{
@@ -433,7 +433,8 @@ impl TreeData{
             }
         }
         else{
-            let magnitude = 8<<depth;
+            assert!(!node_is_raw(root));
+            let magnitude = 8<<(depth-2);
             let subvalue = self.map.get(root).unwrap();
             if subvalue.set_count != 0{
                 for (i, subnode) in subvalue.v.to_array().iter().enumerate(){
@@ -441,7 +442,7 @@ impl TreeData{
                         x:((i%2) as i64) * magnitude,
                         y:((i/2) as i64) * magnitude,
                     };
-                    self.dump_points_recursive(*subnode, depth-1, cur_loc + *&offset, cur_points);
+                    self.dump_points_recursive(*subnode, depth-1, cur_loc + offset, cur_points);
                 }
             }
         }
@@ -462,7 +463,8 @@ fn set_bit(bitidx: u8) -> u64{
 fn gather_raw_points(points: &Vec<Point>) -> HashMap<Point, u128>{
     let mut map: HashMap<Point, u128> = HashMap::new();
     for p in points.iter(){
-        *map.entry(*p).or_insert(0) |= set_bit(point_8x8_loc(*p)) as u128;
+        let ploc = Point{x:p.x/8,y:p.y/8};
+        *map.entry(ploc).or_insert(0) |= set_bit(point_8x8_loc(*p)) as u128;
     }
     map
 }

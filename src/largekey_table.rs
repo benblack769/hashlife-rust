@@ -90,14 +90,14 @@ impl<T: Copy> LargeKeyTable<T>{
                 self.table[idx].value = value;
             },
             PossibleIdx::Empty(idx)=>{
-                if self.n_elements >= self.table.len()/2{
-                    self._grow();
-                }
                 self.n_elements += 1;
                 self.table[idx] = HashNodeData{
                     key: key,
                     value: value,
                 };
+                if self.n_elements >= self.table.len()/2{
+                    self._grow();
+                }
             }
         }
     }
@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn test_hash_insertions(){
         let basekey:u128 = 0x8fab04dd8336fe8b33e4424a0d9e3e97;
-        let mut table: LargeKeyTable<i32> = LargeKeyTable::new(3, 0xcc, 0xccccccc);
+        let mut table: LargeKeyTable<i32> = LargeKeyTable::new(1, 0xcc, 0xccccccc);
         const MAX_CHECK: usize = 5;
         for i in 0..MAX_CHECK{
             table.add(basekey+(i*i) as u128, i as i32);

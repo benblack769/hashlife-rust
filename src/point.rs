@@ -36,3 +36,14 @@ impl ops::Add<Point> for Point {
         }
     }
 }
+
+impl ops::Add<&Point> for Point {
+    type Output = Point;
+
+    fn add(self, _rhs: &Point) -> Point {
+        Point{
+            x:self.x + _rhs.x,
+            y:self.y + _rhs.y,
+        }
+    }
+}
