@@ -120,12 +120,13 @@ fn pack_4bit_to_bits(x:u32)->u8{
 }
 
 fn unpack_to_bit4(d: QuadTreeValue) -> [u64;16]{
-    let dataarr = [d.lt as u64,d.lb as u64,d.rt as u64,d.rb as u64];
+    let dataarr = d.to_array().map(|x|x as u64);
     let dataarr_bytes = unsafe{std::mem::transmute::<[u64; 4], [u8;32]>(dataarr)};
     let mut blocked_bytes = [0 as u8;32];
     for y in 0..16 {
-        blocked_bytes[y*2] = dataarr_bytes[y];
-        blocked_bytes[y*2+1] = dataarr_bytes[y+16];
+        let b = (y/8)*8;
+        blocked_bytes[y*2] = dataarr_bytes[y+b];
+        blocked_bytes[y*2+1] = dataarr_bytes[y+b+8];
     }
     let unpacked_i32s = blocked_bytes.map(to_4bit);
     unsafe{std::mem::transmute::<[u32; 32], [u64;16]>(unpacked_i32s)}
@@ -139,10 +140,11 @@ fn get_inner_8x8(data: [u64;16])->[u32;8]{
     unsafe{std::mem::transmute::<[u16; 16], [u32;8]>(inner_bytes)}
 }
 fn pack_finished_bit4(data: [u32;8]) -> u64{
-    let packed_inner_blocks = data.map(pack_4bit_to_bits);
+    let mut packed_inner_blocks = data.map(pack_4bit_to_bits);
     unsafe{std::mem::transmute::<[u8; 8], u64>(packed_inner_blocks)}
 }
 fn step_forward_raw(d: QuadTreeValue, n_steps: u64) -> u128{
+    assert!(n_steps <= 4);
     let mut input_data = unpack_to_bit4(d);
     let mut operate_data = [0 as u64;16];
     for _ in 0..n_steps{
@@ -185,8 +187,6 @@ pub struct TreeData{
     root: u128,
     depth: u64,
 }
-
-
 
 
 impl TreeData{
@@ -238,6 +238,10 @@ impl TreeData{
         if d.is_raw(){
             assert_eq!(depth, 0);
             step_forward_raw(d, n_steps)
+        }
+        else if self.get_set_count(&d) == 0{
+            assert_ne!(depth, 0);
+            self.black_key((depth) as usize)
         }
         else{
             assert_ne!(depth, 0);
@@ -301,7 +305,7 @@ impl TreeData{
         while self.depth < 3{
             self.increase_depth();
         }
-        let max_steps = 4 << (self.depth-1);
+        let max_steps = 4 << (self.depth);
         let cur_steps = std::cmp::min(max_steps, n_steps);
         let steps_left = n_steps - cur_steps;
         let init_map = self.map.get(self.root).unwrap().v.to_array().map(|x|self.map.get(x).unwrap().v.to_array());
@@ -316,6 +320,7 @@ impl TreeData{
             self.step_forward(n_steps);
         }
         else{
+            self.increase_depth();
             let newkey = self.step_forward_rec(self.map.get(self.root).unwrap().v, self.depth-1, cur_steps);
             self.root = newkey;
             self.depth -= 1;
@@ -325,16 +330,17 @@ impl TreeData{
         }
     }
     fn step_forward_compute_recursive(&mut self, d: QuadTreeValue, depth: u64, n_steps: u64) -> u128{
+        assert!(n_steps <= (4<<depth));
         let init_map = d.to_array().map(|x|self.map.get(x).unwrap().v.to_array());
         let arg_map = unsafe{std::mem::transmute::<[[u128;4]; 4], [u128;16]>(init_map)};
         let mut transposed_map = transpose_quad(&arg_map);
         let next_iter_full_steps = 4<<(depth-1);
         for bt in 0..2{
             let dt = std::cmp::min(next_iter_full_steps as i64,std::cmp::max(0, n_steps as i64-next_iter_full_steps*bt)) as u64;
-            let mut result = [0 as u128;16];
+            let mut result = [NULL_KEY;16];
             for x in 0..(3-bt){
                 for y in 0..(3-bt){
-                    let d1 = QuadTreeValue::from_array(&slice(&transposed_map, y as usize, x as usize));
+                    let d1 = QuadTreeValue::from_array(&slice(&transposed_map, x as usize,y as usize));
                     result[(y*4+x) as usize] = self.step_forward_rec(d1,depth-1,dt);                    
                 }
             }
@@ -358,6 +364,9 @@ impl TreeData{
             let node = orig_table.get(root).unwrap();
             for newroot in node.v.to_array().iter(){
                 TreeData::add_deps_to_tree(orig_table, new_table, *newroot);
+            }
+            if node.forward_key != NULL_KEY && !node_is_raw( node.forward_key){
+                TreeData::add_deps_to_tree(orig_table, new_table, node.forward_key);
             }
             new_table.add(root,node);
         }
@@ -448,7 +457,7 @@ impl TreeData{
 }
 
 fn point_8x8_loc(p: Point) -> u8{
-    (p.y * 8 + (p.x % 8)) as u8
+    ((p.y % 8)*8 + (p.x % 8)) as u8
 }
 fn set_bit(bitidx: u8) -> u64{
     (1 as u64) << bitidx
@@ -598,6 +607,81 @@ mod tests {
         assert_eq!(get_inner_8x8(map16x16), expecteded_8x8);
     }
     #[test]
+    fn test_packbits(){
+        let maps:[[u32;8];4] = [
+            [
+                0x01000000,
+                0x01000000,
+                0x11011100,
+                0x01000000,
+                0x01000000,
+                0x01001100,
+                0x11010000,
+                0x01000000,
+            ],
+            [
+                0x11010000,
+                0x01000000,
+                0x11011100,
+                0x01000000,
+                0x01000000,
+                0x01000000,
+                0x01001100,
+                0x01000000,
+            ],
+            [
+                0x01000000,
+                0x11011100,
+                0x01000000,
+                0x01000000,
+                0x01000000,
+                0x01001100,
+                0x11010000,
+                0x01000000,
+            ],
+            [
+                0x01000000,
+                0x01000000,
+                0x11011100,
+                0x01000000,
+                0x01000000,
+                0x01001100,
+                0x01000000,
+                0x11010000,
+            ]
+        ];
+        let expected_map: [u64;16] = [
+            0x1101000001000000,
+            0x0100000001000000,
+            0x1101110011011100,
+            0x0100000001000000,
+            0x0100000001000000,
+            0x0100000001001100,
+            0x0100110011010000,
+            0x0100000001000000,
+            0x0100000001000000,
+            0x0100000011011100,
+            0x1101110001000000,
+            0x0100000001000000,
+            0x0100000001000000,
+            0x0100110001001100,
+            0x0100000011010000,
+            0x1101000001000000,
+        ];
+        let bits64 = maps.map(|x|pack_finished_bit4(x));
+        let expectedbits64: [u64; 4] = [
+            0x40D04C4040DC4040,
+            0x404C404040DC40D0,
+            0x40D04C404040DC40,
+            0xD0404C4040DC4040,
+        ];
+        
+        assert_eq!(bits64, expectedbits64);
+        let value = QuadTreeValue::from_array(&bits64.map(|x| x as u128));
+        let unpacked = unpack_to_bit4(value);
+        assert_eq!(unpacked, expected_map);
+    }
+    #[test]
     fn test_cmprison(){
         let sumval: u64 = 0x3412750434127504;
         let curval: u64 = 0x0100000101000001;
@@ -615,9 +699,33 @@ mod tests {
     }
     #[test]
     fn test_transpose_quad(){
-        let orig_arr: [u128;16] = [1,2,5,6,3,4,7,8,9,10,13,14,11,12,15,16];
-        let expected: [u128;16] = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+        let orig_arr: [u128;16] =  [
+            1, 2, 3, 4,
+            5, 6, 7, 8,
+            9, 10,11,12,
+            13,14,15,16
+        ];
+        let expected: [u128;16] =[
+            1, 2, 5, 6,
+            3, 4, 7, 8,
+            9, 10,13,14,
+            11,12,15,16
+        ];
         assert_eq!(transpose_quad(&orig_arr), expected);
+    }
+    #[test]
+    fn test_slice(){
+        let orig_arr: [u128;16] = [
+            1, 2, 5, 6,
+            3, 4, 7, 8,
+            9, 10,13,14,
+            11,12,15,16
+        ];
+        let expected: [u128;4] = [
+            4, 7, 
+            10, 13, 
+        ];
+        assert_eq!(slice(&orig_arr,1,1), expected);
     }
 
 }

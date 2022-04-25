@@ -19,8 +19,10 @@ pub use crate::quadtree::{TreeData};
 pub use crate::rle::*;
 
 fn dump_points_to_str(points: &Vec<Point>)->String{
+    let mut sorted_points = points.clone();
+    sorted_points.sort();
     let mut mystr = String::new();
-    for p in points.iter(){
+    for p in sorted_points.iter(){
         let pstr = format!("{x}\t{y}\n", x=p.x,y=p.y);
         mystr.push_str(&pstr);
     }
@@ -38,7 +40,9 @@ fn main() {
     let contents = fs::read_to_string(in_filename).unwrap();
     let points = parse_fle_file(&contents);
     let mut tree = TreeData::gather_all_points(&points);
-    tree.step_forward(50);
+    for _ in 0..1{
+    tree.step_forward(5000);
+    }
     let out_points = tree.dump_all_points();
     let rle_tot_str = write_rle(&out_points);
 
