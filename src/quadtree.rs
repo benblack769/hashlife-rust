@@ -49,7 +49,7 @@ fn node_is_raw(x:u128)->bool{
     // is the base, raw data if the top 64 bits are all 0
     // note that this should result in a collision with a real hash
     // with 1/2^64 probability
-    (x >> 64) == 0 
+    (x >> 64) == 0
 }
 impl QuadTreeValue{
     fn key(&self) -> u128 {
@@ -101,7 +101,7 @@ const fn bits_to_4bit(x:u8)->u32{
 const fn generate_bit_to_4bit_mapping()->[u32;256]{
     let mut cached_map = [0 as u32;256];
     let mut i = 0;
-    // using a while loop because `for`, `map`, etc, 
+    // using a while loop because `for`, `map`, etc,
     // do not work in constant function as of 2021 stable release
     while i < 256{
         cached_map[i] = bits_to_4bit(i as u8);
@@ -153,33 +153,29 @@ fn step_forward_raw(d: QuadTreeValue, n_steps: u64) -> u128{
     }
     pack_finished_bit4(get_inner_8x8(input_data)) as u128
 }
-fn transpose_quad(in_map:&[u128;16])->[u128;16]{
+fn transpose_quad(im:&[u128;16])->[u128;16]{
     //transpose 2x2 quads (each of which are 2x2) into a 4x4 grid
-    let mut transposed_map = [0 as u128;16];
-    for i1 in 0..2{
-        for i2 in 0..2{
-            for i3 in 0..2{
-                for i4 in 0..2{
-                    transposed_map[i1*8+i3*4+i2*2+i4] = in_map[i1*8+i2*4+i3*2+i4];
-                }
-            }
-        }
-    }
-    transposed_map
+    [
+        im[0], im[1], im[4], im[5],
+        im[2], im[3], im[6], im[7],
+        im[8], im[9], im[12],im[13],
+        im[10],im[11],im[14],im[15],
+    ]
 }
+
 fn is_on_4x4_border(i: usize)->bool{
-    let x = i%4;
-    let y = i/4;
-    x == 0 || x == 3 || y == 0 || y == 3
+    [
+        0, 1, 2, 3,
+        4,       7,
+        8,       11,
+        12,13,14,15,
+    ].iter().any(|x|*x == i)
 }
 fn slice(in_map:&[u128;16], x: usize, y: usize)->[u128;4]{
-    let mut res = [0 as u128;4];
-    for dy in 0..2{
-        for dx in 0..2{
-            res[dy*2+dx] = in_map[(dy+y)*4+dx+x];
-        }
-    }
-    res
+    [
+        in_map[(0+y)*4+0+x], in_map[(0+y)*4+1+x],
+        in_map[(1+y)*4+0+x], in_map[(1+y)*4+1+x],
+    ]
 }
 pub struct TreeData{
     map: LargeKeyTable<QuadTreeNode>,
@@ -225,14 +221,12 @@ impl TreeData{
         }
     }
     fn get_set_count(&self, d: &QuadTreeValue)->u64{
-        d.to_array().iter().map(|x|{
-            if d.is_raw(){
-                (*x as u64).count_ones() as u64
-            }
-            else{
-                self.map.get(*x).unwrap().set_count
-            }
-        }).sum()
+        if d.is_raw(){
+            d.to_array().iter().map(|x|(*x as u64).count_ones() as u64).sum()
+        }
+        else{
+            d.to_array().iter().map(|x|self.map.get(*x).unwrap().set_count).sum()
+        }
     }
     fn step_forward_compute(&mut self,d: QuadTreeValue, depth: u64, n_steps: u64) -> u128{
         if d.is_raw(){
@@ -241,6 +235,7 @@ impl TreeData{
         }
         else if self.get_set_count(&d) == 0{
             //if it is black, return a black key
+            //TODO: check if there is a better way to do this....
             self.black_key((depth) as usize)
         }
         else{
@@ -286,8 +281,8 @@ impl TreeData{
         let bkeyd1 = self.black_key((self.depth-1) as usize);
         let smap = [
             bkeyd1, bkeyd1, bkeyd1, bkeyd1,
-            bkeyd1, l1m[0], l1m[1], bkeyd1, 
-            bkeyd1, l1m[2], l1m[3], bkeyd1, 
+            bkeyd1, l1m[0], l1m[1], bkeyd1,
+            bkeyd1, l1m[2], l1m[3], bkeyd1,
             bkeyd1, bkeyd1, bkeyd1, bkeyd1,
         ];
         let depth0map = [
@@ -345,7 +340,7 @@ impl TreeData{
                 for x in 0..(3-bt){
                     for y in 0..(3-bt){
                         let d1 = QuadTreeValue::from_array(&slice(&transposed_map, x as usize,y as usize));
-                        result[(y*4+x) as usize] = self.step_forward_rec(d1,depth-1,dt);                    
+                        result[(y*4+x) as usize] = self.step_forward_rec(d1,depth-1,dt);
                     }
                 }
                 transposed_map = result;
@@ -384,7 +379,7 @@ impl TreeData{
         TreeData::add_deps_to_tree(&self.map, &mut next_map, self.root);
         self.map = next_map;
     }
-    
+
     fn gather_points_recurive(&mut self, prev_map: &HashMap<Point, u128>, depth: usize) -> HashMap<Point, u128>{
         let mut map: HashMap<Point, u128> = HashMap::new();
         for oldp in prev_map.keys(){
@@ -413,7 +408,7 @@ impl TreeData{
         }
         map
     }
-        
+
     pub fn gather_all_points(points: &Vec<Point>)->TreeData{
         let mut cur_map = gather_raw_points(&points);
         let mut tree = TreeData::new();
@@ -426,7 +421,7 @@ impl TreeData{
         tree.depth = depth;
         tree
     }
-    
+
     fn dump_points_recursive(&self, root: u128, depth: u64, cur_loc: Point, cur_points: & mut Vec<Point>){
         if depth == 0{
             assert!(node_is_raw(root));
@@ -493,7 +488,7 @@ fn child_points(p:Point) -> [Point;4] {
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    
+
     #[test]
     fn test_step_forward_16x16() {
         let value_map:[u64;16] = [
@@ -577,7 +572,7 @@ mod tests {
         let out_value_map = step_forward_automata_16x16(&value_map);
         assert_eq!(out_value_map, expected_out);
 
-    }    
+    }
     #[test]
     fn test_get_inner_8() {
         let map16x16:[u64;16] = [
@@ -679,7 +674,7 @@ mod tests {
             0x40D04C404040DC40,
             0xD0404C4040DC4040,
         ];
-        
+
         assert_eq!(bits64, expectedbits64);
         let value = QuadTreeValue::from_array(&bits64.map(|x| x as u128));
         let unpacked = unpack_to_bit4(value);
@@ -726,8 +721,8 @@ mod tests {
             11,12,15,16
         ];
         let expected: [u128;4] = [
-            4, 7, 
-            10, 13, 
+            4, 7,
+            10, 13,
         ];
         assert_eq!(slice(&orig_arr,1,1), expected);
     }

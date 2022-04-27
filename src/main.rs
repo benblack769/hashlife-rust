@@ -95,8 +95,15 @@ mod tests {
         let mut tree = TreeData::gather_all_points(&points);
         // tree.increase_depth();
         // tree.increase_depth();
-        // tree.step_forward(1);
+        // tree.step_forward(1000);
         let out_points = tree.dump_all_points();
+        let orig_p_str = dump_points_to_str(&points);
+        let new_p_str = dump_points_to_str(&out_points);
+         fs::write("orig_points.txt", orig_p_str)
+            .expect("failed to open points.txt file for writing");
+        fs::write("new_points.txt", new_p_str)
+            .expect("failed to open points.txt file for writing");
+    
         let rle_tot_str = write_rle(&out_points);
         assert_eq!(expected, rle_tot_str);
     }

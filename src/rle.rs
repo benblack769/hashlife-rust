@@ -45,7 +45,7 @@ pub fn generate_rle_contents(points:& Vec<Point>) -> String{
     let minx = points.iter().map(|p|p.x).min().unwrap();
     let mut sorted_points = points.clone();
     sorted_points.sort();
-    let firstp = points.get(0).unwrap();
+    let firstp = sorted_points.get(0).unwrap();
     let mut y = firstp.y;
     let mut x = minx;
     for p in sorted_points{
@@ -111,6 +111,8 @@ pub fn split_string_to_lines(ins: &str, spacing:i64) -> String{
         let endi = cmp::min(starti + spacing, ins.len() as i64);
         let inslice = &ins[(starti as usize)..(endi as usize)];
         outs.push_str(inslice);
+        // TODO: remove this comment
+        // outs.push('\n');
     }
     return outs;
 }
