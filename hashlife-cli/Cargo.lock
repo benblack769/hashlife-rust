@@ -3,6 +3,13 @@
 version = 3
 
 [[package]]
+name = "hashlife-cli"
+version = "0.1.0"
+dependencies = [
+ "hashlife-fast",
+]
+
+[[package]]
 name = "hashlife-fast"
 version = "0.1.0"
 dependencies = [

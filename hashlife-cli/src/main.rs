@@ -2,16 +2,7 @@
 use std::env;
 
 use std::fs;
-use std::assert;
-
-mod point;
-mod rle;
-mod quadtree;
-mod largekey_table;
-
-pub use crate::point::Point;
-pub use crate::quadtree::{TreeData};
-pub use crate::rle::*;
+use hashlife_fast::*;
 
 fn dump_points_to_str(points: &Vec<Point>)->String{
     let mut sorted_points = points.clone();
