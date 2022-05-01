@@ -18,10 +18,11 @@ mod tests {
         sum:u8,
         curval:u8
     ) -> u8 {
-        if sum == 3 {
+        let other_val = sum - curval;
+        if other_val == 3 {
             1
         }
-        else if sum == 4 {
+        else if other_val == 2 || other_val == 3 {
             curval
         }
         else{
@@ -64,11 +65,7 @@ mod tests {
         res
     }
     fn points_equal(v1: &Vec<Point>, v2: &Vec<Point>)->bool{
-        let mut v1s = v1.clone();
-        let mut v2s = v2.clone();
-        v1s.sort();
-        v2s.sort();
-        v1s.len() == v2s.len() && v1s.iter().zip(v2s.iter()).all(|(x1,x2)|x1 == x2)
+        v1.len() == v2.len() && sort_points(v1).iter().zip(sort_points(v2).iter()).all(|(x1,x2)|*x1 == *x2)
     }
     fn step_forward_gold(points: &Vec<Point>, n_steps: u64)->Vec<Point>{
         const SIZE: usize = 1000;
@@ -82,22 +79,23 @@ mod tests {
             map.clone_from_slice(&newmap);
         }
         // let mut mutdata
-        map_to_points(&map, SIZE, SIZE)
+        map_to_points(&map, SIZE, SIZE).iter().map(|x|*x+Point{x:-((SIZE/2) as i64),y:-((SIZE/2) as i64)}).collect()
     }
     fn step_forward_actual(points: &Vec<Point>, n_steps: u64)->Vec<Point>{
         let mut tree = TreeData::gather_all_points(&points);
         tree.step_forward(n_steps);
         tree.dump_all_points()
     }
+    fn sort_points(points: &Vec<Point>)->Vec<Point>{
+        let mut sps = points.clone();
+        sps.sort();
+        sps
+    }
     
     fn dump_points_to_str(points: &Vec<Point>)->String{
-        let mut sorted_points = points.clone();
-        let minx = sorted_points.iter().map(|p|p.x).min().unwrap();
-        let miny = sorted_points.iter().map(|p|p.y).min().unwrap();
-        sorted_points.sort();
         let mut mystr = String::new();
-        for p in sorted_points.iter(){
-            let pstr = format!("{x}\t{y}\n", x=p.x-minx,y=p.y-miny);
+        for p in sort_points(points).iter(){
+            let pstr = format!("{x}\t{y}\n", x=p.x,y=p.y);
             mystr.push_str(&pstr);
         }
         mystr
@@ -159,12 +157,12 @@ mod tests {
             "12bo8bo$bo2bo2b2o2bo25bo2b2o2bo2bo$6bo5bo7b3o3b3o7bo5bo$6bo5bo8bo5bo8bo5bo$6bo5bo8b7o8bo5bo$bo2bo2b2o2bo2b2o4bo7bo4b2o2bo2b2o2bo2bo$o8bo3b2o4b11o4b2o3bo8bo$o3bo9b2o17b2o9bo3bo$4o11b19o11b4o$16bobo11bobo$19b11o$19bo9bo$20b9o$24bo$20b3o3b3o$22bo3bo$$21b3ob3o$21b3ob3o$20bob2ob2obo$20b3o3b3o$21bo5bo!\n"
         );
         let points = parse_fle_file(contents);
-        let n_steps = 1;
+        let n_steps = 5;
         let gold_points = step_forward_gold(&points, n_steps);
         let actual_points = step_forward_actual(&points, n_steps);
-        fs::write("gold_points.txt", dump_points_to_str(&gold_points))
+        fs::write("gold_points.txt", dump_points_to_str(&sort_points(&gold_points)))
            .expect("failed to open points.txt file for writing");
-       fs::write("actual_points.txt", dump_points_to_str(&actual_points))
+       fs::write("actual_points.txt", dump_points_to_str(&sort_points(&actual_points)))
            .expect("failed to open points.txt file for writing");
    
         assert!(points_equal(&gold_points, &actual_points));

@@ -182,6 +182,7 @@ pub struct TreeData{
     black_keys: Vec<u128>,
     root: u128,
     depth: u64,
+    offset: Point,
 }
 
 
@@ -194,6 +195,7 @@ impl TreeData{
             black_keys: vec![BLACK_BASE],
             root: BLACK_BASE,
             depth: 0,
+            offset: Point{x:0,y:0},
         };
         // extend the tree so that increase_size() method can be called
         tree_data.root = tree_data.black_key(1);
@@ -292,6 +294,8 @@ impl TreeData{
         let newkey = self.add_array(depth0map);
         self.root = newkey;
         self.depth += 1;
+        let magnitude = (8<<(self.depth-2)) as i64;
+        self.offset = self.offset + Point{x:-magnitude,y:-magnitude};
     }
     fn is_black(&self, key: u128)->bool{
         key == 0 || self.map.get(key).unwrap().set_count == 0
@@ -319,6 +323,8 @@ impl TreeData{
             let newkey = self.step_forward_rec(self.map.get(self.root).unwrap().v, self.depth-1, cur_steps);
             self.root = newkey;
             self.depth -= 1;
+            let magnitude = (8<<(self.depth-1)) as i64;
+            self.offset = self.offset + Point{x:magnitude,y:magnitude};
             if steps_left != 0{
                 self.step_forward(steps_left);
             }
@@ -417,8 +423,11 @@ impl TreeData{
             depth += 1;
             cur_map = tree.gather_points_recurive(&cur_map, depth as usize);
         }
+        let magnitude = (8<<(depth-1)) as i64;
+        let rootp = *cur_map.keys().next().unwrap();
         tree.root = *cur_map.values().next().unwrap();
         tree.depth = depth;
+        tree.offset = Point{x:rootp.x*magnitude, y:rootp.y*magnitude};
         tree
     }
 
@@ -452,7 +461,7 @@ impl TreeData{
     }
     pub fn dump_all_points(&self) -> Vec<Point>{
         let mut res: Vec<Point> = Vec::new();
-        self.dump_points_recursive(self.root, self.depth, Point{x:0,y:0}, &mut res);
+        self.dump_points_recursive(self.root, self.depth, self.offset, &mut res);
         res
     }
 }
