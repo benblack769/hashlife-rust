@@ -7,3 +7,10 @@ edition = "2021"
 
 [dependencies]
 hashlife-fast = { path = "../hashlife-algo", version = "0.1.0" }
+
+[profile.release]
+opt-level = 3  # Optimize for size.
+panic = "abort"
+lto = true
+codegen-units = 1
+

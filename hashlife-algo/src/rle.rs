@@ -96,8 +96,8 @@ pub fn compress_os(orig_str: &str)->String{
 pub fn write_rle(points:& Vec<Point>) -> String{
     let mut s: String = String::new();
     s.push_str("x = 0, y = 0, rule = B3/S23\n");
-    s.push_str(compress_os(generate_rle_contents(points).as_str()).as_str());
-    return split_string_to_lines(&s, 80);
+    s.push_str(split_string_to_lines(compress_os(generate_rle_contents(points).as_str()).as_str(), 70).as_str());
+    return s;
 }
 
 fn cdiv(x:i64, y: i64) -> i64{

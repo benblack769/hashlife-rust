@@ -21,17 +21,19 @@ fn dump_points_to_str(points: &Vec<Point>)->String{
 fn main() {
     let args: Vec<String> = env::args().collect();
     println!("{:?}\n\n", args);
-    assert!(args.len() == 3);
+    assert!(args.len() == 4);
     let in_filename = &args[1];
-    let out_filename = &args[2];
+    let n_steps = args[2].parse::<u64>().unwrap();
+    let out_filename = &args[3];
 
     let contents = fs::read_to_string(in_filename).unwrap();
     let points = parse_fle_file(&contents);
     let mut tree = TreeData::gather_all_points(&points);
-    for _ in 0..0{
-    tree.step_forward(4001);
-    }
+    println!("finished gathering");
+    tree.step_forward(n_steps);
+    println!("finished stepping");
     let out_points = tree.dump_all_points();
+    println!("finished dumping");
     let rle_tot_str = write_rle(&out_points);
 
     let orig_p_str = dump_points_to_str(&points);

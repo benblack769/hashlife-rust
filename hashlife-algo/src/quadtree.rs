@@ -151,7 +151,7 @@ fn step_forward_raw(d: QuadTreeValue, n_steps: u64) -> u128{
     for _ in 0..n_steps{
         input_data = step_forward_automata_16x16(&input_data);
     }
-    pack_finished_bit4(get_inner_8x8(input_data)) as u128
+     pack_finished_bit4(get_inner_8x8(input_data)) as u128
 }
 fn transpose_quad(im:&[u128;16])->[u128;16]{
     //transpose 2x2 quads (each of which are 2x2) into a 4x4 grid
@@ -177,6 +177,7 @@ fn slice(in_map:&[u128;16], x: usize, y: usize)->[u128;4]{
         in_map[(1+y)*4+0+x], in_map[(1+y)*4+1+x],
     ]
 }
+
 pub struct TreeData{
     map: LargeKeyTable<QuadTreeNode>,
     black_keys: Vec<u128>,
@@ -214,7 +215,7 @@ impl TreeData{
                 let cur_key = cur_value.key();
                 self.map.add(cur_key, QuadTreeNode{
                     v: cur_value,
-                    forward_key: NULL_KEY,
+                    forward_key: prev_key,
                     set_count: 0,
                 });
                 self.black_keys.push(cur_key);
@@ -261,7 +262,7 @@ impl TreeData{
                 let set_key = if n_steps == full_steps {newkey} else {NULL_KEY};
                 self.map.add(key, QuadTreeNode{
                     v: d,
-                    forward_key: NULL_KEY,
+                    forward_key: set_key,
                     set_count: self.get_set_count(&d),
                 });
             }
@@ -271,11 +272,13 @@ impl TreeData{
     fn add_array(&mut self, arr: [u128;4])->u128{
         let val = QuadTreeValue::from_array(&arr);
         let key = val.key();
-        self.map.add(key, QuadTreeNode{
-            v: val,
-            forward_key: NULL_KEY,
-            set_count: self.get_set_count(&val),
-        });
+        if self.map.get(key).is_none(){
+            self.map.add(key, QuadTreeNode{
+                v: val,
+                forward_key: NULL_KEY,
+                set_count: self.get_set_count(&val),
+            });
+        }
         key
     }
     pub fn increase_depth(&mut self){

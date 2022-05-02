@@ -68,7 +68,7 @@ mod tests {
         v1.len() == v2.len() && sort_points(v1).iter().zip(sort_points(v2).iter()).all(|(x1,x2)|*x1 == *x2)
     }
     fn step_forward_gold(points: &Vec<Point>, n_steps: u64)->Vec<Point>{
-        const SIZE: usize = 1000;
+        const SIZE: usize = 300;
         let centered_points = points.iter().map(|x|*x+Point{x:(SIZE/2) as i64,y:(SIZE/2) as i64}).collect();
         let mut map = vec![0 as u8; SIZE*SIZE];
         set_map(&centered_points, &mut map, SIZE, SIZE);
@@ -158,8 +158,9 @@ mod tests {
         );
         let points = parse_fle_file(contents);
         let n_steps = 5;
-        let gold_points = step_forward_gold(&points, n_steps);
         let actual_points = step_forward_actual(&points, n_steps);
+        println!("done with actual");
+        let gold_points = step_forward_gold(&points, n_steps);
         fs::write("gold_points.txt", dump_points_to_str(&sort_points(&gold_points)))
            .expect("failed to open points.txt file for writing");
        fs::write("actual_points.txt", dump_points_to_str(&sort_points(&actual_points)))

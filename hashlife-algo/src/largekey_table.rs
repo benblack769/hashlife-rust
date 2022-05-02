@@ -45,7 +45,7 @@ impl<T: Copy> LargeKeyTable<T>{
         }
     }
     fn get_idx(&self, key: u128) -> PossibleIdx{
-        let mut curkey = key;
+        let mut curkey = key >> 24;
         //quadratic probing for now
         let mut curoffset: usize = 0;
         loop {
@@ -57,8 +57,8 @@ impl<T: Copy> LargeKeyTable<T>{
             else if entry.key == self.null_key{
                 return PossibleIdx::Empty(idx);
             }
-            curkey >>= 8;
             curoffset += (curkey as usize) & 0xff;
+            curkey >>= 1;
         }
     }
     pub fn get(&self, key: u128) -> Option<T>{

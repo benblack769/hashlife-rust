@@ -9,7 +9,7 @@ edition = "2021"
 metrohash = "1.0.6"
 
 [profile.release]
-opt-level = "z"  # Optimize for size.
+opt-level = 3  # Optimize for size.
 panic = "abort"
 lto = true
 codegen-units = 1
