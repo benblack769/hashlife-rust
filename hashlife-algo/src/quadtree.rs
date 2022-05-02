@@ -177,6 +177,26 @@ fn slice(in_map:&[u128;16], x: usize, y: usize)->[u128;4]{
         in_map[(1+y)*4+0+x], in_map[(1+y)*4+1+x],
     ]
 }
+fn rep_bytes(v: u8)->u64{
+    let v1 = v as u64;
+    let v2 = v1 | (v1 << 32);
+    let v4 = v2 | (v2 << 16);
+    let v8 = v4 | (v4 << 8);
+    v8
+}
+fn get_gray_mask(d: i64)-> u64{
+    let nds = 1<<(d+2);
+    let xmask = rep_bytes((1<<nds) - 1);
+    let ymask = (((1 as u64)<<(nds*8))- 1);
+    let mask = xmask & ymask;
+    mask
+}
+fn get_subchunk(v: u64, d: i64, x: u8, y: u8)->u64{
+    let nds = 1<<(d+2);
+    let xshift = v >> (nds * x);
+    let yshift = xshift >> (nds*8*y);
+    get_gray_mask(d) & yshift 
+}
 
 pub struct TreeData{
     map: LargeKeyTable<QuadTreeNode>,
@@ -467,6 +487,45 @@ impl TreeData{
         self.dump_points_recursive(self.root, self.depth, self.offset, &mut res);
         res
     }
+        
+    // fn iter_grayscale_points<F>(&self, root: u128, depth: i64, cur_loc: Point, fun:F)
+    // where
+    //     F: FnMut(i64,Point,u8)->bool
+    // {
+    //     if depth <= 0{
+    //         assert!(node_is_raw(root));
+    //         let min_depth = -3;
+    //         let val = root as u64;
+    //         // dsize*dsize, but the compiler optimizes the division better
+    //         let area =  1<<(2*(depth+3));
+    //         let density = (val.count_ones()*255 / area) as u8;
+    //         if (fun(depth, cur_loc, density) && depth > min_depth){
+    //             let nds = 1<<(depth+2);
+    //             let xmask = rep_bytes(nds - 1);
+    //             let ymask = ((8 as u64)<<nds)- 1;
+    //             let mask = xmask | ymask;
+    //             self.iter_grayscale_points(val, depth-1,cur_loc+Point{x:0,y:0}, fun);
+    //             self.iter_grayscale_points(root, depth-1,cur_loc+Point{x:0,y:0}, fun);
+    //         }
+    //     }
+    //     else{
+    //         assert!(!node_is_raw(root));
+    //         let magnitude = 8<<(depth-1);
+    //         let subvalue = self.map.get(root).unwrap();
+    //         if subvalue.set_count != 0{
+    //             for (i, subnode) in subvalue.v.to_array().iter().enumerate(){
+    //                 let offset = Point{
+    //                     x:((i%2) as i64) * magnitude,
+    //                     y:((i/2) as i64) * magnitude,
+    //                 };
+    //                 self.dump_points_recursive(*subnode, depth-1, cur_loc + offset, cur_points);
+    //             }
+    //         }
+    //     }
+    // }
+    // pub fn make_grayscale_map(&self, offset:Point, xsize: usize, ysize: usize, sample_depth: u64) -> Vec<u8> {
+    //     (0..(xsize*ysize)).map(|i|self.get_grayscale_pixel(Point{x:(i%xsize) as i64,y:(i/xsize) as i64}, sample_depth)).collect()
+    // }
 }
 
 fn point_8x8_loc(p: Point) -> u8{
@@ -737,6 +796,27 @@ mod tests {
             10, 13,
         ];
         assert_eq!(slice(&orig_arr,1,1), expected);
+    }
+    #[test]
+    fn test_rep_bytes(){
+        assert_eq!(rep_bytes(3),0x0303030303030303 as u64);
+    }
+    #[test]
+    fn test_get_graymask(){
+        assert_eq!(get_gray_mask(0),  0x000000000f0f0f0f);
+        assert_eq!(get_gray_mask(-1), 0x0000000000000303);
+        assert_eq!(get_gray_mask(-2), 0x0000000000000001);
+    }
+    #[test]
+    fn test_get_chunk(){
+        assert_eq!(get_subchunk(0x5432109876543210, 0, 0, 0),0x06040200);
+        assert_eq!(get_subchunk(0x5432109876543210, 0, 0, 1),0x04020008);
+        assert_eq!(get_subchunk(0x5432109876543210, 0, 1, 0),0x07050301);
+        assert_eq!(get_subchunk(0x5432109876543210, 0, 1, 1),0x05030109);
+        assert_eq!(get_subchunk(0x06040201, -1, 0, 0),0x0201);
+        assert_eq!(get_subchunk(0x06040201, -1, 0, 1),0x0200);
+        assert_eq!(get_subchunk(0x06040201, -1, 1, 0),0x0000);
+        assert_eq!(get_subchunk(0x06040201, -1, 1, 1),0x0101);
     }
 
 }

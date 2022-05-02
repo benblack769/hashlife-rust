@@ -25,7 +25,6 @@ enum PossibleIdx {
     Found(usize),
     Empty(usize),
 }
-
 impl<T: Copy> LargeKeyTable<T>{
     pub fn new(initial_capacity_log2:u8, null_key: u128, null_value: T) -> LargeKeyTable<T>{
         let next_size = 1 << initial_capacity_log2;
