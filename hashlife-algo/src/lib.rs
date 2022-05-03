@@ -45,7 +45,7 @@ mod tests {
             }
         }
     }
-    fn set_map(points: &Vec<Point>, map: &mut[u8], xsize:usize, ysize: usize){
+    fn set_map(points: &Vec<Point>, map: &mut[u8], xsize:usize){
         for p in points.iter(){
             map[(p.y as usize)*xsize+p.x as usize] = 1;
         }
@@ -71,7 +71,7 @@ mod tests {
         const SIZE: usize = 300;
         let centered_points = points.iter().map(|x|*x+Point{x:(SIZE/2) as i64,y:(SIZE/2) as i64}).collect();
         let mut map = vec![0 as u8; SIZE*SIZE];
-        set_map(&centered_points, &mut map, SIZE, SIZE);
+        set_map(&centered_points, &mut map, SIZE);
 
         for _ in 0..n_steps{
             let mut newmap = vec![0 as u8; SIZE*SIZE];
@@ -134,7 +134,7 @@ mod tests {
         );
 
         let points = parse_fle_file(contents);
-        let mut tree = TreeData::gather_all_points(&points);
+        let tree = TreeData::gather_all_points(&points);
         // tree.increase_depth();
         // tree.increase_depth();
         // tree.step_forward(1000);

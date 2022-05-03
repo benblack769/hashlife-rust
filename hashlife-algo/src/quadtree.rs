@@ -187,7 +187,7 @@ fn rep_bytes(v: u8)->u64{
 fn get_gray_mask(d: i64)-> u64{
     let nds = 1<<(d+2);
     let xmask = rep_bytes((1<<nds) - 1);
-    let ymask = (((1 as u64)<<(nds*8))- 1);
+    let ymask = ((1 as u64)<<(nds*8))- 1;
     let mask = xmask & ymask;
     mask
 }
@@ -453,79 +453,59 @@ impl TreeData{
         tree.offset = Point{x:rootp.x*magnitude, y:rootp.y*magnitude};
         tree
     }
-
-    fn dump_points_recursive(&self, root: u128, depth: u64, cur_loc: Point, cur_points: & mut Vec<Point>){
-        if depth == 0{
+        
+    fn iter_grayscale_points<F>(&self, root: u128, depth: i64, cur_loc: Point, fun:&mut F)
+    where
+        F: FnMut(i64,Point,u64)->bool
+    {
+        // let area =  (1 as u64)<<(2*(depth+3));
+        if depth <= -3{
+            let count = (root as u64) & 1;
+            fun(depth, cur_loc, count);
+        }
+        else if depth <= 0{
             assert!(node_is_raw(root));
-            let mut cur_v = root as u64;
-            for y in 0..8{
-                for x in 0..8{
-                    if (cur_v & 1) != 0{
-                        cur_points.push(cur_loc + Point{x:x,y:y});
+            let min_depth = -3;
+            let val = root as u64;
+            let magnitude = 1<<(depth+2);
+            // dsize*dsize, but the compiler optimizes the division better
+            if fun(depth, cur_loc, val.count_ones() as u64) && depth > min_depth {
+                for y in 0..2{
+                    for x in 0..2{
+                        let offset = Point{x:x*magnitude, y:y*magnitude}; 
+                        self.iter_grayscale_points(get_subchunk(val, depth, x as u8, y as u8) as u128, depth-1,cur_loc+offset, fun);
                     }
-                    cur_v >>= 1;
                 }
             }
         }
         else{
             assert!(!node_is_raw(root));
-            let magnitude = 8<<(depth-1);
+            let magnitude = 1<<(depth+2);
             let subvalue = self.map.get(root).unwrap();
-            if subvalue.set_count != 0{
+            if fun(depth, cur_loc, subvalue.set_count){
                 for (i, subnode) in subvalue.v.to_array().iter().enumerate(){
                     let offset = Point{
                         x:((i%2) as i64) * magnitude,
                         y:((i/2) as i64) * magnitude,
                     };
-                    self.dump_points_recursive(*subnode, depth-1, cur_loc + offset, cur_points);
+                    self.iter_grayscale_points(*subnode, depth-1,cur_loc+offset, fun);
                 }
             }
         }
     }
     pub fn dump_all_points(&self) -> Vec<Point>{
         let mut res: Vec<Point> = Vec::new();
-        self.dump_points_recursive(self.root, self.depth, self.offset, &mut res);
+        self.iter_grayscale_points(self.root, self.depth as i64, self.offset, &mut|depth,p,density|{
+            if density == 0{
+                return false;
+            }
+            if depth == -3{
+                res.push(p);
+            }
+            return true;
+        });
         res
     }
-        
-    // fn iter_grayscale_points<F>(&self, root: u128, depth: i64, cur_loc: Point, fun:F)
-    // where
-    //     F: FnMut(i64,Point,u8)->bool
-    // {
-    //     if depth <= 0{
-    //         assert!(node_is_raw(root));
-    //         let min_depth = -3;
-    //         let val = root as u64;
-    //         // dsize*dsize, but the compiler optimizes the division better
-    //         let area =  1<<(2*(depth+3));
-    //         let density = (val.count_ones()*255 / area) as u8;
-    //         if (fun(depth, cur_loc, density) && depth > min_depth){
-    //             let nds = 1<<(depth+2);
-    //             let xmask = rep_bytes(nds - 1);
-    //             let ymask = ((8 as u64)<<nds)- 1;
-    //             let mask = xmask | ymask;
-    //             self.iter_grayscale_points(val, depth-1,cur_loc+Point{x:0,y:0}, fun);
-    //             self.iter_grayscale_points(root, depth-1,cur_loc+Point{x:0,y:0}, fun);
-    //         }
-    //     }
-    //     else{
-    //         assert!(!node_is_raw(root));
-    //         let magnitude = 8<<(depth-1);
-    //         let subvalue = self.map.get(root).unwrap();
-    //         if subvalue.set_count != 0{
-    //             for (i, subnode) in subvalue.v.to_array().iter().enumerate(){
-    //                 let offset = Point{
-    //                     x:((i%2) as i64) * magnitude,
-    //                     y:((i/2) as i64) * magnitude,
-    //                 };
-    //                 self.dump_points_recursive(*subnode, depth-1, cur_loc + offset, cur_points);
-    //             }
-    //         }
-    //     }
-    // }
-    // pub fn make_grayscale_map(&self, offset:Point, xsize: usize, ysize: usize, sample_depth: u64) -> Vec<u8> {
-    //     (0..(xsize*ysize)).map(|i|self.get_grayscale_pixel(Point{x:(i%xsize) as i64,y:(i/xsize) as i64}, sample_depth)).collect()
-    // }
 }
 
 fn point_8x8_loc(p: Point) -> u8{
