@@ -9,6 +9,18 @@ pub struct Point{
     pub y:i64,
 }
 
+impl Point {
+    pub fn neg(&self) ->Point{
+        Point{x:-self.x,y:-self.y}
+    }
+    pub fn times(&self, m: i64) ->Point{
+        Point{x:self.x*m,y:self.y*m}
+    }
+    pub fn div(&self, m: i64) ->Point{
+        Point{x:self.x/m,y:self.y/m}
+    }
+}
+
 impl Ord for Point{
     fn cmp(&self, other: &Self) -> Ordering{
         match self.y.cmp(&other.y){

@@ -450,7 +450,7 @@ impl TreeData{
         let rootp = *cur_map.keys().next().unwrap();
         tree.root = *cur_map.values().next().unwrap();
         tree.depth = depth;
-        tree.offset = Point{x:rootp.x*magnitude, y:rootp.y*magnitude};
+        tree.offset = rootp.times(magnitude);
         tree
     }
         
@@ -472,7 +472,7 @@ impl TreeData{
             if fun(depth, cur_loc, val.count_ones() as u64) && depth > min_depth {
                 for y in 0..2{
                     for x in 0..2{
-                        let offset = Point{x:x*magnitude, y:y*magnitude}; 
+                        let offset = Point{x:x, y:y}.times(magnitude); 
                         self.iter_grayscale_points(get_subchunk(val, depth, x as u8, y as u8) as u128, depth-1,cur_loc+offset, fun);
                     }
                 }
@@ -485,9 +485,9 @@ impl TreeData{
             if fun(depth, cur_loc, subvalue.set_count){
                 for (i, subnode) in subvalue.v.to_array().iter().enumerate(){
                     let offset = Point{
-                        x:((i%2) as i64) * magnitude,
-                        y:((i/2) as i64) * magnitude,
-                    };
+                        x:((i%2) as i64),
+                        y:((i/2) as i64),
+                    }.times(magnitude);
                     self.iter_grayscale_points(*subnode, depth-1,cur_loc+offset, fun);
                 }
             }
@@ -495,14 +495,40 @@ impl TreeData{
     }
     pub fn dump_all_points(&self) -> Vec<Point>{
         let mut res: Vec<Point> = Vec::new();
-        self.iter_grayscale_points(self.root, self.depth as i64, self.offset, &mut|depth,p,density|{
-            if density == 0{
+        self.iter_grayscale_points(self.root, self.depth as i64, self.offset, &mut|depth,p,count|{
+            if count == 0{
                 return false;
             }
             if depth == -3{
                 res.push(p);
             }
             return true;
+        });
+        res
+    }
+    
+    pub fn make_grayscale_map(&self, offset:Point, xsize: usize, ysize: usize, zoom: u8, brightness: f64) -> Vec<u8> {
+        let mut res: Vec<u8> = Vec::new();
+        res.resize(xsize*ysize, 0);
+        const B2: u8 = 16;
+        let brightness_int = (brightness * (1<<B2) as f64) as u64;
+        self.iter_grayscale_points(self.root, self.depth as i64, offset.neg() + self.offset, &mut|depth,p,count|{
+            let magnitude:i64 = (1<<(depth+3));
+            let t = p.div(magnitude);
+            if count == 0{
+                false
+            }
+            else if t.x >= xsize as i64 || t.y >= ysize as i64 || t.x+1 <= 0 || t.y + 1 <= 0{
+                false
+            }
+            else if zoom as i64 >= depth+3{
+                let area_log2 = zoom*2;
+                res[(t.y*(xsize as i64)+t.x) as usize] = std::cmp::min(255, (255*brightness_int*count) >> (B2 + area_log2)) as u8;
+                false
+            }
+            else{
+                true
+            }
         });
         res
     }
