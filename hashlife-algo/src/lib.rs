@@ -3,7 +3,7 @@ mod rle;
 mod quadtree;
 mod largekey_table;
 
-pub use crate::point::Point;
+pub use crate::point::{Point};
 pub use crate::quadtree::{TreeData};
 pub use crate::rle::*;
 
