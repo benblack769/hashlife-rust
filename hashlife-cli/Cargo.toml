@@ -11,7 +11,4 @@ png = "0.17.5"
 
 [profile.release]
 opt-level = 3  # Optimize for size.
-panic = "abort"
-lto = true
-codegen-units = 1
-
+debug = 1

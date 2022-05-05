@@ -31,6 +31,7 @@ impl QuadTreeValue{
 struct QuadTreeNode{
     v: QuadTreeValue,
     forward_key: u128,
+    forward_steps: u64,
     set_count: u64,
 }
 const NULL_KEY: u128 = 0xcccccccccccccccccccccccccccccccc;
@@ -43,6 +44,7 @@ const NULL_VALUE: QuadTreeValue = QuadTreeValue{
 const NULL_NODE: QuadTreeNode = QuadTreeNode{
     v: NULL_VALUE,
     forward_key: NULL_KEY,
+    forward_steps: 0,
     set_count: 0xcccccccccccccccc,
 };
 fn node_is_raw(x:u128)->bool{
@@ -129,24 +131,8 @@ fn pack_4bit_to_bits(x:u32)->u8{
     let g8 = ((g4 >> 12) | g4) & 0x0000000ff;
     g8 as u8
 }
-fn unpack_bytes_from_word(x: u32)->u64{
-    let v1 = x as u64;
-    let v2 = (v1 | (v1 << 16)) & 0x0000ffff0000ffff;
-    let v4 = (v2 | (v2 << 8)) & 0x00ff00ff00ff00ff;
-    v4
-}
-fn interleave_bytes(v1: u32, v2: u32)-> u64{
-    unpack_bytes_from_word(v1) | (unpack_bytes_from_word(v2) << 8)
-}
-
 fn unpack_to_bit4(d: QuadTreeValue) -> [u64;16]{
     let dataarr = d.to_array().map(|x|x as u64);
-    // let interleaved = [
-    //     interleave_bytes((dataarr[0] >> 0) as u32, (dataarr[1] >> 0) as u32),
-    //     interleave_bytes((dataarr[0] >> 32) as u32, (dataarr[1] >> 32) as u32),
-    //     interleave_bytes((dataarr[2] >> 0) as u32, (dataarr[3] >> 0) as u32),
-    //     interleave_bytes((dataarr[2] >> 32) as u32, (dataarr[3] >> 32) as u32),
-    // ];
     let mut blocked_bit4 = [0 as u64;16];
     for b in 0..2{
         let mut a1 = dataarr[b*2+0];
@@ -268,7 +254,8 @@ impl TreeData{
                 let cur_key = cur_value.key();
                 self.map.add(cur_key, QuadTreeNode{
                     v: cur_value,
-                    forward_key: prev_key,
+                    forward_steps: 0,
+                    forward_key: NULL_KEY,
                     set_count: 0,
                 });
                 self.black_keys.push(cur_key);
@@ -284,44 +271,6 @@ impl TreeData{
             d.to_array().iter().map(|x|self.map.get(*x).unwrap().set_count).sum()
         }
     }
-    fn step_forward_compute(&mut self,d: QuadTreeValue, depth: u64, n_steps: u64) -> u128{
-        if d.is_raw(){
-            assert_eq!(depth, 0);
-            step_forward_raw(d, n_steps)
-        }
-        else if self.get_set_count(&d) == 0{
-            //if it is black, return a black key
-            //TODO: check if there is a better way to do this....
-            self.black_key((depth) as usize)
-        }
-        else{
-            assert_ne!(depth, 0);
-            self.step_forward_compute_recursive(d, depth, n_steps)
-        }
-    }
-
-    fn step_forward_rec(&mut self,d: QuadTreeValue, depth: u64, n_steps: u64) -> u128{
-        let full_steps = 4<<depth;
-        assert!(n_steps <= full_steps, "num steps requested greater than full step, logic inaccurate");
-        let key = d.key();
-        let item = self.map.get(key);
-        if n_steps == full_steps && item.is_some() && item.unwrap().forward_key != NULL_KEY{
-            item.unwrap().forward_key
-        }
-        else{
-            let newkey = self.step_forward_compute(d, depth, n_steps);
-            // update the forward_key with the new key
-            if item.is_none() || (n_steps == full_steps && item.unwrap().forward_key == NULL_KEY) {
-                let set_key = if n_steps == full_steps {newkey} else {NULL_KEY};
-                self.map.add(key, QuadTreeNode{
-                    v: d,
-                    forward_key: set_key,
-                    set_count: self.get_set_count(&d),
-                });
-            }
-            newkey
-        }
-    }
     fn add_array(&mut self, arr: [u128;4])->u128{
         let val = QuadTreeValue::from_array(&arr);
         let key = val.key();
@@ -329,6 +278,7 @@ impl TreeData{
             self.map.add(key, QuadTreeNode{
                 v: val,
                 forward_key: NULL_KEY,
+                forward_steps: 0,
                 set_count: self.get_set_count(&val),
             });
         }
@@ -376,7 +326,7 @@ impl TreeData{
         }
         else{
             self.increase_depth();
-            let newkey = self.step_forward_rec(self.map.get(self.root).unwrap().v, self.depth-1, cur_steps);
+            let newkey = self.step_forward_rec(self.root, self.depth-1, cur_steps);
             self.root = newkey;
             self.depth -= 1;
             let magnitude = (8<<(self.depth-1)) as i64;
@@ -386,40 +336,66 @@ impl TreeData{
             }
         }
     }
-    fn step_forward_compute_recursive(&mut self, d: QuadTreeValue, depth: u64, n_steps: u64) -> u128{
-        assert!(n_steps <= (4<<depth));
-        let init_map = d.to_array().map(|x|self.map.get(x).unwrap().v.to_array());
-        let arg_map = unsafe{std::mem::transmute::<[[u128;4]; 4], [u128;16]>(init_map)};
-        let mut transposed_map = transpose_quad(&arg_map);
-        let finalarr = if n_steps == 0{
-            slice(&transposed_map, 1, 1)
+    fn step_forward_rec(&mut self,key: u128, depth: u64, n_steps: u64) -> u128{
+        let full_steps = 4<<depth;
+        assert!(n_steps <= full_steps, "num steps requested greater than full step, logic inaccurate");
+        let item = self.map.get(key).unwrap();
+        if n_steps == item.forward_steps && item.forward_key != NULL_KEY{
+            item.forward_key
         }
         else{
-            let next_iter_full_steps = 4<<(depth-1);
-            for bt in 0..2{
-                let dt = std::cmp::min(next_iter_full_steps as i64,std::cmp::max(0, n_steps as i64-next_iter_full_steps*bt)) as u64;
-                let mut result = [NULL_KEY;16];
-                for x in 0..(3-bt){
-                    for y in 0..(3-bt){
-                        let d1 = QuadTreeValue::from_array(&slice(&transposed_map, x as usize,y as usize));
-                        result[(y*4+x) as usize] = self.step_forward_rec(d1,depth-1,dt);
-                    }
-                }
-                transposed_map = result;
+            let newkey = self.step_forward_compute_recursive(key, depth, n_steps);
+            // update the forward_key with the new key
+            if n_steps != 0{
+                self.map.add(key, QuadTreeNode{
+                    v: item.v,
+                    forward_key: newkey,
+                    forward_steps: n_steps,
+                    set_count: item.set_count,
+                });
             }
-            slice(&transposed_map, 0, 0)
-        };
-        let finald = QuadTreeValue::from_array(&finalarr);
-        // need to add finald to the table so that downstream users can look up its children
-        let finalkey = finald.key();
-        if self.map.get(finalkey).is_none(){
-            self.map.add(finalkey,QuadTreeNode{
-                v: finald,
-                forward_key: NULL_KEY,
-                set_count: self.get_set_count(&finald),
-            });
+            newkey
         }
-        finalkey
+    }
+    fn step_forward_compute_recursive(&mut self, key: u128, depth: u64, n_steps: u64) -> u128{
+        let node = self.map.get(key).unwrap();
+        let d = node.v;
+        if d.is_raw(){
+            assert_eq!(depth, 0);
+            step_forward_raw(d, n_steps)
+        }
+        else if node.set_count == 0{
+            //if it is black, return a black key
+            //TODO: check if there is a better way to do this....
+            self.black_key((depth) as usize)
+        }
+        else{
+            assert_ne!(depth, 0);
+            assert!(n_steps <= (4<<depth));
+            let init_map = d.to_array().map(|x|self.map.get(x).unwrap().v.to_array());
+            let arg_map = unsafe{std::mem::transmute::<[[u128;4]; 4], [u128;16]>(init_map)};
+            let mut transposed_map = transpose_quad(&arg_map);
+            let finalarr = if n_steps == 0{
+                slice(&transposed_map, 1, 1)
+            }
+            else{
+                let next_iter_full_steps = 4<<(depth-1);
+                for bt in 0..2{
+                    let dt = std::cmp::min(next_iter_full_steps as i64,std::cmp::max(0, n_steps as i64-next_iter_full_steps*bt)) as u64;
+                    let mut result = [NULL_KEY;16];
+                    for x in 0..(3-bt){
+                        for y in 0..(3-bt){
+                            let k1 = self.add_array(slice(&transposed_map, x as usize,y as usize));
+                            result[(y*4+x) as usize] = self.step_forward_rec(k1,depth-1,dt);
+                        }
+                    }
+                    transposed_map = result;
+                }
+                slice(&transposed_map, 0, 0)
+            };
+            // need to add finald to the table so that downstream users can look up its children
+            self.add_array(finalarr)
+        }
     }
     fn add_deps_to_tree(orig_table:&LargeKeyTable<QuadTreeNode>, new_table: &mut LargeKeyTable<QuadTreeNode>, root: u128){
         // if not raw value
@@ -462,6 +438,7 @@ impl TreeData{
                     self.map.add(key,QuadTreeNode{
                         v: value,
                         forward_key: NULL_KEY,
+                        forward_steps: 0,
                         set_count: self.get_set_count(&value),
                     });
                     entry.insert(key);

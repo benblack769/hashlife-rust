@@ -41,19 +41,19 @@ fn main() {
     println!("finished gathering");
     tree.step_forward(n_steps);
     println!("finished stepping");
-    let xsize = 1000;
-    let ysize = 1000;
-    save_png("arg.png",xsize,ysize,&tree.make_grayscale_map(Point{x:0,y:0}, xsize, ysize, 0, 1.)[..]);
+    let xsize = 400;
+    let ysize = 400;
+    save_png("arg.png",xsize,ysize,&tree.make_grayscale_map(Point{x:0,y:0}, xsize, ysize, 8, 1006.)[..]);
     let out_points = tree.dump_all_points();
     println!("finished dumping");
     let rle_tot_str = write_rle(&out_points);
 
-    let orig_p_str = dump_points_to_str(&points);
-    let new_p_str = dump_points_to_str(&out_points);
-    fs::write("orig_points.txt", orig_p_str)
-        .expect("failed to open points.txt file for writing");
-    fs::write("new_points.txt", new_p_str)
-        .expect("failed to open points.txt file for writing");
+    // let orig_p_str = dump_points_to_str(&points);
+    // let new_p_str = dump_points_to_str(&out_points);
+    // fs::write("orig_points.txt", orig_p_str)
+    //     .expect("failed to open points.txt file for writing");
+    // fs::write("new_points.txt", new_p_str)
+    //     .expect("failed to open points.txt file for writing");
 
     fs::write(out_filename, rle_tot_str)
         .expect("failed to open output file for writing");
