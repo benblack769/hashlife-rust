@@ -68,49 +68,58 @@ impl QuadTreeValue{
 fn calc_result_bitsize(sums:u64, orig_vals:u64)->u64{
     //can support either 8 bit or 4 bit packing
     let mask = 0x1111111111111111 as u64;
-    let bit1set = sums & mask;
-    let bit2set = (sums >> 1) & mask;
-    let bit4set = (sums >> 2) & mask;
+    let bit1set = sums;
+    let bit2set = (sums >> 1);
+    let bit4set = (sums >> 2);
     let ge3 = bit1set & bit2set;
     let eq4 = bit4set & !bit1set & !bit2set;
     let eq3 = ge3 & !bit4set;
-    let res = (eq4&orig_vals) | eq3;
+    let res = ((eq4&orig_vals) | eq3) & mask;
     res
 }
-
-fn step_forward_automata_16x16(prevmap: &[u64;16])->[u64;16]{
-    //masking by this row makes sure that extra bits on end don't get set
+fn sum_row(row: u64)->u64{
+    row + (row<<4) + (row>>4)
+}
+fn step_forward_automata_16x16(prevmap: &[u64], nextmap: &mut[u64], step_num: usize){
+    //masking by this row makes sure that extra bits on end don't get set (not technically inaccurate, just confusing)
+    debug_assert!(step_num < 4);
     let rowmask = 0x0111111111111110 as u64;
-    let summedmap = prevmap.map(|row|row + (row<<4) + (row>>4));
-    let mut nextmap =[0 as u64;16];
-    for y in 1..(16-1){
-        let csum = summedmap[y-1] + summedmap[y] + summedmap[y+1];
+    let mut s1 = sum_row(prevmap[step_num]);
+    let mut s2 = sum_row(prevmap[step_num+1]);
+    let mut csum = s1 + s2;
+    for y in (1+step_num)..(16-1-step_num){
+        let s3 = sum_row(prevmap[y+1]);
+        csum += s3;
         let row_result = calc_result_bitsize(csum,prevmap[y]);
         nextmap[y] = row_result & rowmask;
+        csum -= s1;
+        s1 = s2;
+        s2 = s3;
     }
-    nextmap
 }
 
-const fn bits_to_4bit(x:u8)->u32{
-    let q8 = x as u32;
-    let q4 = (q8 | (q8 << 12)) & 0x000f000f;
-    let q2 = (q4 | (q4 << 6)) &  0x03030303;
-    let q1 = (q2 | (q2 << 3)) &  0x11111111;
+const fn bits_to_4bit(x:u16)->u64{
+    let q16 = x as u64;
+    let q8 = (q16 | (q16 << 24)) & 0x000000ff000000ff;
+    let q4 = (q8 | (q8 << 12))   & 0x000f000f000f000f;
+    let q2 = (q4 | (q4 << 6))   &  0x0303030303030303;
+    let q1 = (q2 | (q2 << 3))   &  0x1111111111111111;
     q1
 }
-const fn generate_bit_to_4bit_mapping()->[u32;256]{
-    let mut cached_map = [0 as u32;256];
+const MAP_SIZE:usize = 1<<16;
+const fn generate_bit_to_4bit_mapping()->[u64;MAP_SIZE]{
+    let mut cached_map = [0 as u64;MAP_SIZE];
     let mut i = 0;
     // using a while loop because `for`, `map`, etc,
     // do not work in constant function as of 2021 stable release
-    while i < 256{
-        cached_map[i] = bits_to_4bit(i as u8);
+    while i < MAP_SIZE{
+        cached_map[i] = bits_to_4bit(i as u16);
         i += 1;
     }
     cached_map
 }
-const BIT4_MAPPING:[u32;256] = generate_bit_to_4bit_mapping();
-fn to_4bit(x: u8) -> u32{
+const BIT4_MAPPING:[u64;MAP_SIZE] = generate_bit_to_4bit_mapping();
+fn to_4bit(x: u16) -> u64{
     BIT4_MAPPING[x as usize]
 }
 fn pack_4bit_to_bits(x:u32)->u8{
@@ -120,26 +129,43 @@ fn pack_4bit_to_bits(x:u32)->u8{
     let g8 = ((g4 >> 12) | g4) & 0x0000000ff;
     g8 as u8
 }
+fn unpack_bytes_from_word(x: u32)->u64{
+    let v1 = x as u64;
+    let v2 = (v1 | (v1 << 16)) & 0x0000ffff0000ffff;
+    let v4 = (v2 | (v2 << 8)) & 0x00ff00ff00ff00ff;
+    v4
+}
+fn interleave_bytes(v1: u32, v2: u32)-> u64{
+    unpack_bytes_from_word(v1) | (unpack_bytes_from_word(v2) << 8)
+}
 
 fn unpack_to_bit4(d: QuadTreeValue) -> [u64;16]{
     let dataarr = d.to_array().map(|x|x as u64);
-    let dataarr_bytes = unsafe{std::mem::transmute::<[u64; 4], [u8;32]>(dataarr)};
-    let mut blocked_bytes = [0 as u8;32];
-    for y in 0..16 {
-        let b = (y/8)*8;
-        blocked_bytes[y*2] = dataarr_bytes[y+b];
-        blocked_bytes[y*2+1] = dataarr_bytes[y+b+8];
+    // let interleaved = [
+    //     interleave_bytes((dataarr[0] >> 0) as u32, (dataarr[1] >> 0) as u32),
+    //     interleave_bytes((dataarr[0] >> 32) as u32, (dataarr[1] >> 32) as u32),
+    //     interleave_bytes((dataarr[2] >> 0) as u32, (dataarr[3] >> 0) as u32),
+    //     interleave_bytes((dataarr[2] >> 32) as u32, (dataarr[3] >> 32) as u32),
+    // ];
+    let mut blocked_bit4 = [0 as u64;16];
+    for b in 0..2{
+        let mut a1 = dataarr[b*2+0];
+        let mut a2 = dataarr[b*2+1];
+        for y in 0..8 {
+            let v = ((a1 & 0x00ff) | (a2 << 8) & 0xff00) as u16;
+            blocked_bit4[b*8+y] = to_4bit(v);
+            a1 >>= 8;
+            a2 >>= 8;
+        }
     }
-    let unpacked_i32s = blocked_bytes.map(to_4bit);
-    unsafe{std::mem::transmute::<[u32; 32], [u64;16]>(unpacked_i32s)}
+    blocked_bit4
 }
-fn get_inner_8x8(data: [u64;16])->[u32;8]{
-    let data_shorts = unsafe{std::mem::transmute::<[u64; 16], [u16;64]>(data)};
-    let mut inner_bytes = [0 as u16; 16];
+fn get_inner_8x8(data: &[u64])->[u32;8]{
+    let mut inner_words = [0 as u32; 8];
     for y in 0..8{
-        inner_bytes[y*2..][0..2].clone_from_slice(&data_shorts[(4+y)*4..][1..3]);
+        inner_words[y] = (data[y+4] >> 16) as u32;
     }
-    unsafe{std::mem::transmute::<[u16; 16], [u32;8]>(inner_bytes)}
+    inner_words
 }
 fn pack_finished_bit4(data: [u32;8]) -> u64{
     let packed_inner_blocks = data.map(pack_4bit_to_bits);
@@ -147,11 +173,18 @@ fn pack_finished_bit4(data: [u32;8]) -> u64{
 }
 fn step_forward_raw(d: QuadTreeValue, n_steps: u64) -> u128{
     assert!(n_steps <= 4);
-    let mut input_data = unpack_to_bit4(d);
-    for _ in 0..n_steps{
-        input_data = step_forward_automata_16x16(&input_data);
+    let mut data1 = unpack_to_bit4(d);
+    let mut data2 = [0 as u64;16];
+    for step in 0..n_steps{
+        if step%2 == 0{
+            step_forward_automata_16x16(&data1[..], &mut data2[..], step as usize);
+        }
+        else{
+            step_forward_automata_16x16(&data2[..], &mut data1[..], step as usize);
+        }
     }
-     pack_finished_bit4(get_inner_8x8(input_data)) as u128
+    let final_data =  if n_steps%2 == 0 {&data1[..]} else {&data2[..]};
+     pack_finished_bit4(get_inner_8x8(final_data)) as u128
 }
 fn transpose_quad(im:&[u128;16])->[u128;16]{
     //transpose 2x2 quads (each of which are 2x2) into a 4x4 grid
@@ -604,7 +637,8 @@ mod tests {
             0x0000000000110000,
             0x0000000000000000,
         ];
-        let out_value_map = step_forward_automata_16x16(&value_map);
+        let mut out_value_map = [0 as u64; 16];
+        step_forward_automata_16x16(&value_map, &mut out_value_map, 0);
         assert_eq!(out_value_map, expected_out);
 
     }
@@ -646,7 +680,8 @@ mod tests {
             0x0000000000000000,
             0x0000000000000000,
         ];
-        let out_value_map = step_forward_automata_16x16(&value_map);
+        let mut out_value_map = [0 as u64; 16];
+        step_forward_automata_16x16(&value_map, &mut out_value_map, 0);
         assert_eq!(out_value_map, expected_out);
 
     }
@@ -680,7 +715,7 @@ mod tests {
             0x11010000,
             0x01000000,
         ];
-        assert_eq!(get_inner_8x8(map16x16), expecteded_8x8);
+        assert_eq!(get_inner_8x8(&map16x16[..]), expecteded_8x8);
     }
     #[test]
     fn test_packbits(){
