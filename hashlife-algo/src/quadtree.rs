@@ -120,7 +120,6 @@ fn pack_4bit_to_bits(x:u32)->u8{
     let g8 = ((g4 >> 12) | g4) & 0x0000000ff;
     g8 as u8
 }
-
 fn unpack_to_bit4(d: QuadTreeValue) -> [u64;16]{
     let dataarr = d.to_array().map(|x|x as u64);
     let dataarr_bytes = unsafe{std::mem::transmute::<[u64; 4], [u8;32]>(dataarr)};
@@ -251,7 +250,7 @@ impl TreeData{
             d.to_array().iter().map(|x|self.map.get(*x).unwrap().set_count).sum()
         }
     }
-    fn step_forward_compute(&mut self,d: QuadTreeValue, depth: u64, n_steps: u64) -> u128{
+    fn step_forward_compute(&mut self,key: u128, depth: u64, n_steps: u64) -> u128{
         if d.is_raw(){
             assert_eq!(depth, 0);
             step_forward_raw(d, n_steps)

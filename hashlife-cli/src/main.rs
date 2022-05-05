@@ -41,9 +41,9 @@ fn main() {
     println!("finished gathering");
     tree.step_forward(n_steps);
     println!("finished stepping");
-    let xsize = 1000;
-    let ysize = 1000;
-    save_png("arg.png",xsize,ysize,&tree.make_grayscale_map(Point{x:0,y:0}, xsize, ysize, 0, 1.)[..]);
+    let xsize = 400;
+    let ysize = 400;
+    save_png("arg.png",xsize,ysize,&tree.make_grayscale_map(Point{x:0,y:0}, xsize, ysize, 4, 16.)[..]);
     let out_points = tree.dump_all_points();
     println!("finished dumping");
     let rle_tot_str = write_rle(&out_points);

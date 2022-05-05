@@ -5,9 +5,10 @@ pub use crate::point::Point;
 
 pub fn iter_coords<F>(boardrow: &str, func: &mut F)
 where
-    F: FnMut(i64)
+    F: FnMut(Point)
 {
-    let mut pos: i64 = 0;
+    let mut xpos: i64 = 0;
+    let mut ypos: i64 = 0;
     let mut prefixnum: i64 = 0;
     let mut prefixset = false;
     for c in boardrow.chars(){
@@ -19,17 +20,21 @@ where
             let repeat = if prefixset {prefixnum} else {1};
             if c == 'b'{
                 // do nothing, blank
+                xpos += repeat;
             } else if c == 'o'{
-                for i in pos..(pos+repeat){
-                    func(i);
+                for i in xpos..(xpos+repeat){
+                    func(Point{x:i,y:ypos});
                 }
+                xpos += repeat;
+            } else if c == '$' {
+                ypos += repeat;
+                xpos = 0;
             } else if c == '!' {
-                break;
+                    break;
             }
             else{
                 panic!("RLE file incorrectly formatted, only 'b' and 'o' allowed.")
             }
-            pos += repeat;
             prefixset = false;
             prefixnum = 0;
         }
@@ -125,20 +130,16 @@ pub fn parse_fle_file(file_contents: &str) -> Vec<Point> {
             break;
         }
     }
-    let mut points: Vec<Point> = Vec::new();
-    // reads in input
-    let mut y:i64 = 0;
+    // remove endlines and put together remainder of file
+    let mut remaining_str = String::new();
     while let Some(line) = line_iter.next() {
-        for boardline in line.split_terminator('$') {
-            iter_coords(boardline, &mut|x|{
-                points.push(Point{
-                    x:x,
-                    y:y,
-                });
-            });
-            y += 1;
-        }
+        remaining_str.push_str(line);
     }
+    //iterate through remainder
+    let mut points: Vec<Point> = Vec::new();
+    iter_coords(remaining_str.as_str(), &mut|p|{
+        points.push(p);
+    });
     return points;
 }
 
