@@ -133,18 +133,13 @@ fn pack_4bit_to_bits(x:u32)->u8{
 }
 fn unpack_to_bit4(d: QuadTreeValue) -> [u64;16]{
     let dataarr = d.to_array().map(|x|x as u64);
-    let mut blocked_bit4 = [0 as u64;16];
-    for b in 0..2{
-        let mut a1 = dataarr[b*2+0];
-        let mut a2 = dataarr[b*2+1];
-        for y in 0..8 {
-            let v = ((a1 & 0x00ff) | (a2 << 8) & 0xff00) as u16;
-            blocked_bit4[b*8+y] = to_4bit(v);
-            a1 >>= 8;
-            a2 >>= 8;
-        }
+    let dataarr_bytes = unsafe{std::mem::transmute::<[u64; 4], [u8;32]>(dataarr)};
+    let mut blocked_bytes = [0 as u64;16];
+    for y in 0..16 {
+        let b = (y/8)*8;
+        blocked_bytes[y] = to_4bit(dataarr_bytes[y+b] as u16 + ((dataarr_bytes[y+b+8] as u16) << 8));
     }
-    blocked_bit4
+    blocked_bytes
 }
 fn get_inner_8x8(data: &[u64])->[u32;8]{
     let mut inner_words = [0 as u32; 8];
