@@ -10,5 +10,5 @@ hashlife-fast = { path = "../hashlife-algo", version = "0.1.0" }
 png = "0.17.5"
 
 [profile.release]
-opt-level = 2  # Optimize for size.
+opt-level = 1  # Optimize for size.
 debug = 1
