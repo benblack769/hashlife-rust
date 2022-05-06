@@ -13,6 +13,7 @@ struct HashNodeData<T:Copy>{
     value: T,
 }
 
+#[derive(Clone)]
 pub struct LargeKeyTable<T: Copy>{
     table: Vec<HashNodeData<T>>,
     n_elements: usize,
@@ -43,6 +44,10 @@ impl<T: Copy> LargeKeyTable<T>{
             table_size_log2: initial_capacity_log2,
         }
     }
+    pub fn len(&self)->usize{
+        self.n_elements
+    }
+    #[inline]
     fn get_idx(&self, key: u128) -> PossibleIdx{
         let mut curkey = key >> 24;
         //quadratic probing for now
@@ -60,9 +65,17 @@ impl<T: Copy> LargeKeyTable<T>{
             curkey >>= 1;
         }
     }
+    #[inline]
     pub fn get(&self, key: u128) -> Option<T>{
         match self.get_idx(key){
             PossibleIdx::Found(idx)=>Some(self.table[idx].value),
+            PossibleIdx::Empty(_)=>None
+        }
+    }
+    #[inline]
+    pub fn get_mut(&mut self, key: u128) -> Option<&mut T>{
+        match self.get_idx(key){
+            PossibleIdx::Found(idx)=>Some(&mut self.table[idx].value),
             PossibleIdx::Empty(_)=>None
         }
     }
@@ -79,6 +92,7 @@ impl<T: Copy> LargeKeyTable<T>{
         self.lookup_mask = new_table.lookup_mask;
         self.table_size_log2 = new_table.table_size_log2;
     }
+    #[inline]
     pub fn add(&mut self, key: u128, value: T){
         match self.get_idx(key){
             PossibleIdx::Found(idx)=>{
@@ -93,6 +107,27 @@ impl<T: Copy> LargeKeyTable<T>{
                 if self.n_elements >= self.table.len()/2{
                     self._grow();
                 }
+            }
+        }
+    }
+    pub fn iter_mut<F>(&mut self, func: &mut F)
+    where
+        F: FnMut(&u128, &mut T)
+    {
+        for item in self.table.iter_mut(){
+            if item.key != self.null_key{
+                func(&item.key, &mut item.value);
+            }
+        }
+    }
+    
+    pub fn iter<F>(&self, func: &mut F)
+    where
+        F: FnMut(&u128, &T)
+    {
+        for item in self.table.iter(){
+            if item.key != self.null_key{
+                func(&item.key, &item.value);
             }
         }
     }

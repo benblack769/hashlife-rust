@@ -39,11 +39,18 @@ fn main() {
     let points = parse_fle_file(&contents);
     let mut tree = TreeData::gather_all_points(&points);
     println!("finished gathering");
-    tree.step_forward(n_steps);
+    let MAX_STEPS = 1024;
+    let mut step_n = 0;
+    while step_n < n_steps{
+        let cur_steps = std::cmp::min(n_steps - step_n, MAX_STEPS);
+        tree.step_forward(cur_steps);
+        println!("stepped with hash size {}",tree.hash_count());
+        step_n += cur_steps;
+    }
     println!("finished stepping");
     let xsize = 400;
     let ysize = 400;
-    save_png("arg.png",xsize,ysize,&tree.make_grayscale_map(Point{x:0,y:0}, xsize, ysize, 8, 1006.)[..]);
+    save_png("arg.png",xsize,ysize,&tree.make_grayscale_map(Point{x:0,y:0}, xsize, ysize, 5, 1006.)[..]);
     let out_points = tree.dump_all_points();
     println!("finished dumping");
     let rle_tot_str = write_rle(&out_points);

@@ -31,8 +31,9 @@ impl QuadTreeValue{
 struct QuadTreeNode{
     v: QuadTreeValue,
     forward_key: u128,
-    forward_steps: u64,
     set_count: u64,
+    forward_steps: u32,
+    age: u32,
 }
 const NULL_KEY: u128 = 0xcccccccccccccccccccccccccccccccc;
 const NULL_VALUE: QuadTreeValue = QuadTreeValue{
@@ -45,7 +46,8 @@ const NULL_NODE: QuadTreeNode = QuadTreeNode{
     v: NULL_VALUE,
     forward_key: NULL_KEY,
     forward_steps: 0,
-    set_count: 0xcccccccccccccccc,
+    set_count: 0xcccccccc,
+    age: 0xffffffff,
 };
 fn node_is_raw(x:u128)->bool{
     // is the base, raw data if the top 64 bits are all 0
@@ -252,6 +254,7 @@ impl TreeData{
                     forward_steps: 0,
                     forward_key: NULL_KEY,
                     set_count: 0,
+                    age: 0,
                 });
                 self.black_keys.push(cur_key);
                 cur_key
@@ -275,7 +278,11 @@ impl TreeData{
                 forward_key: NULL_KEY,
                 forward_steps: 0,
                 set_count: self.get_set_count(&val),
+                age: 0,
             });
+        }
+        else{
+            self.sync_age(key, 0);
         }
         key
     }
@@ -320,8 +327,10 @@ impl TreeData{
             self.step_forward(n_steps);
         }
         else{
+            self.map.iter_mut(&mut |_,v|{v.age += cur_steps as u32;});
             self.increase_depth();
             let newkey = self.step_forward_rec(self.root, self.depth-1, cur_steps);
+            self.garbage_collect();
             self.root = newkey;
             self.depth -= 1;
             let magnitude = (8<<(self.depth-1)) as i64;
@@ -335,7 +344,7 @@ impl TreeData{
         let full_steps = 4<<depth;
         assert!(n_steps <= full_steps, "num steps requested greater than full step, logic inaccurate");
         let item = self.map.get(key).unwrap();
-        if n_steps == item.forward_steps && item.forward_key != NULL_KEY{
+        if n_steps == item.forward_steps as u64 && item.forward_key != NULL_KEY{
             item.forward_key
         }
         else{
@@ -345,8 +354,9 @@ impl TreeData{
                 self.map.add(key, QuadTreeNode{
                     v: item.v,
                     forward_key: newkey,
-                    forward_steps: n_steps,
+                    forward_steps: n_steps as u32,
                     set_count: item.set_count,
+                    age: 0,
                 });
             }
             newkey
@@ -392,25 +402,39 @@ impl TreeData{
             self.add_array(finalarr)
         }
     }
-    fn add_deps_to_tree(orig_table:&LargeKeyTable<QuadTreeNode>, new_table: &mut LargeKeyTable<QuadTreeNode>, root: u128){
-        // if not raw value
-        if !node_is_raw(root){
-            let node = orig_table.get(root).unwrap();
-            for newroot in node.v.to_array().iter(){
-                TreeData::add_deps_to_tree(orig_table, new_table, *newroot);
+    fn sync_age(&mut self, root: u128, newage: u32){
+        let value = self.map.get(root).unwrap();
+        if value.age > newage{
+            // need go get the value again, mutable this time to actually change it in the table
+            self.map.get_mut(root).unwrap().age = newage;
+            if !value.v.is_raw(){
+                for newroot in value.v.to_array().iter().chain([value.forward_key].iter().filter(|x|**x!=NULL_KEY)){
+                    self.sync_age(*newroot, newage);
+                }
             }
-            if node.forward_key != NULL_KEY && !node_is_raw( node.forward_key){
-                TreeData::add_deps_to_tree(orig_table, new_table, node.forward_key);
-            }
-            new_table.add(root,node);
         }
     }
     fn garbage_collect(&mut self){
-        let mut next_map = LargeKeyTable::new(self.map.table_size_log2,NULL_KEY,NULL_NODE);
-        //make sure black keys are in new map
-        TreeData::add_deps_to_tree(&self.map, &mut next_map, *self.black_keys.last().unwrap());
-        TreeData::add_deps_to_tree(&self.map, &mut next_map, self.root);
-        self.map = next_map;
+        // let mut touched = LargeKeyTable::new(self.map.table_size_log2, NULL_KEY, ());
+        const MAX_AGE: u32 = 2048;
+        let mut num_age_over = 0;
+        self.map.iter(&mut |key, v|{
+            if v.age > MAX_AGE{
+                num_age_over+=1;
+            }
+        });
+        if num_age_over > self.map.len()/3{
+            let mut next_map = LargeKeyTable::new(self.map.table_size_log2,NULL_KEY,NULL_NODE);
+            self.map.iter(&mut |key, v|{
+                //make sure black keys are never removed
+                if v.set_count == 0 || v.age <= MAX_AGE{
+                    next_map.add(*key, *v);
+                }
+            });
+            println!("garbage collected: {}, final {}",self.map.len(), next_map.len());
+            self.map = next_map;
+        }
+        
     }
 
     fn gather_points_recurive(&mut self, prev_map: &HashMap<Point, u128>, depth: usize) -> HashMap<Point, u128>{
@@ -435,6 +459,7 @@ impl TreeData{
                         forward_key: NULL_KEY,
                         forward_steps: 0,
                         set_count: self.get_set_count(&value),
+                        age: 0,
                     });
                     entry.insert(key);
                 }
@@ -457,6 +482,12 @@ impl TreeData{
         tree.depth = depth;
         tree.offset = rootp.times(magnitude);
         tree
+    }
+    pub fn num_live_cells(&self)->u64{
+        self.map.get(self.root).unwrap().set_count
+    }
+    pub fn hash_count(&self)->usize{
+        self.map.len()
     }
         
     fn iter_grayscale_points<F>(&self, root: u128, depth: i64, cur_loc: Point, fun:&mut F)
