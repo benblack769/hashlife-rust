@@ -7,6 +7,7 @@ name = "hashlife-fast"
 version = "0.1.0"
 dependencies = [
  "metrohash",
+ "static_assertions",
 ]
 
 [[package]]
@@ -14,3 +15,9 @@ name = "metrohash"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ba553cb19e2acbc54baa16faef215126243fe45e53357a3b2e9f4ebc7b0506c"
+
+[[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"

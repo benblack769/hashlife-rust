@@ -1,5 +1,5 @@
 
-use std::env;
+use std::{env, time::Instant};
 use png::{Encoder,ColorType};
 
 
@@ -18,7 +18,7 @@ fn dump_points_to_str(points: &Vec<Point>)->String{
 }
 
 fn save_png(fname:&str, xsize: usize, ysize: usize, data: &[u8]){
-    let mut f = fs::File::create("foo.png").unwrap();
+    let mut f = fs::File::create(fname).unwrap();
     let mut enc = Encoder::new(f, xsize as u32, ysize as u32);
     enc.set_color(ColorType::Grayscale);
     let mut writer = enc.write_header().unwrap();
@@ -37,20 +37,25 @@ fn main() {
 
     let contents = fs::read_to_string(in_filename).unwrap();
     let points = parse_fle_file(&contents);
+    let start_time = Instant::now();
     let mut tree = TreeData::gather_all_points(&points);
     println!("finished gathering");
-    let MAX_STEPS = 1024;
+    let MAX_STEPS = 1<<8;
     let mut step_n = 0;
+    let mut frame = 0;
+    let xsize = 800;
+    let ysize = 800;
     while step_n < n_steps{
         let cur_steps = std::cmp::min(n_steps - step_n, MAX_STEPS);
         tree.step_forward(cur_steps);
-        println!("stepped with hash size {}",tree.hash_count());
         step_n += cur_steps;
+        let t = start_time.elapsed().as_secs_f64();
+        println!("reached step {} at time {} (avg {}) hash size {}",step_n,t,t/step_n as f64, tree.hash_count());
+        let fname = format!("frames/step{:03}.png", frame);
+        // save_png(fname.as_str(),xsize,ysize,&tree.make_grayscale_map(Point{x:0,y:0}, xsize, ysize, 7, 2006.)[..]);
+        frame += 1;
     }
     println!("finished stepping");
-    let xsize = 400;
-    let ysize = 400;
-    save_png("arg.png",xsize,ysize,&tree.make_grayscale_map(Point{x:0,y:0}, xsize, ysize, 5, 1006.)[..]);
     let out_points = tree.dump_all_points();
     println!("finished dumping");
     let rle_tot_str = write_rle(&out_points);
