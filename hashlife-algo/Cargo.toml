@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 metrohash = "1.0.6"
-static_assertions = "1.1.0"
+#static_assertions = "1.1.0"
 
 [profile.release]
 opt-level = 3  # Optimize for size.

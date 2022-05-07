@@ -40,7 +40,7 @@ fn main() {
     let start_time = Instant::now();
     let mut tree = TreeData::gather_all_points(&points);
     println!("finished gathering");
-    let MAX_STEPS = 1<<8;
+    let MAX_STEPS = 1<<13;
     let mut step_n = 0;
     let mut frame = 0;
     let xsize = 800;
@@ -52,7 +52,7 @@ fn main() {
         let t = start_time.elapsed().as_secs_f64();
         println!("reached step {} at time {} (avg {}) hash size {}",step_n,t,t/step_n as f64, tree.hash_count());
         let fname = format!("frames/step{:03}.png", frame);
-        // save_png(fname.as_str(),xsize,ysize,&tree.make_grayscale_map(Point{x:0,y:0}, xsize, ysize, 7, 2006.)[..]);
+        save_png(fname.as_str(),xsize,ysize,&tree.make_grayscale_map(Point{x:0,y:0}, xsize, ysize, 7, 2006.)[..]);
         frame += 1;
     }
     println!("finished stepping");

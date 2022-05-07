@@ -7,13 +7,7 @@ use std::collections::hash_map::Entry;
 use metrohash::MetroHash128;
 use crate::point::Point;
 use crate::raw_ops::*;
-extern crate static_assertions as sa;
 
-
-const MAX_DEPTH: i32 = 48;
-const GARBAGE_COLLECTION_STEPS: i32 = 128; // must be greater than the max depth times parent gap
-const GARBAGE_PARENT_GAP: i32 = 2;
-sa::const_assert!(GARBAGE_COLLECTION_STEPS > MAX_DEPTH *GARBAGE_PARENT_GAP);
 
 #[derive(Copy, Clone)]
 pub struct QuadTreeValue{
@@ -54,8 +48,7 @@ struct QuadTreeNode{
     v: QuadTreeValue,
     forward_key: u128,
     set_count: u64,
-    forward_steps: u32,
-    age: i32,
+    forward_steps: u64,
 }
 const NULL_KEY: u128 = 0xcccccccccccccccccccccccccccccccc;
 pub struct TreeData{
@@ -64,7 +57,6 @@ pub struct TreeData{
     root: u128,
     depth: u64,
     offset: Point,
-    age: i32,
 }
 impl TreeData{
     fn new() -> TreeData{
@@ -76,7 +68,6 @@ impl TreeData{
             root: BLACK_BASE,
             depth: 0,
             offset: Point{x:0,y:0},
-            age: 0,
         };
         // extend the tree so that increase_size() method can be called
         tree_data.root = tree_data.black_key(1);
@@ -98,7 +89,6 @@ impl TreeData{
                     forward_steps: 0,
                     forward_key: NULL_KEY,
                     set_count: 0,
-                    age: 0x3fffffff,
                 });
                 self.black_keys.push(cur_key);
                 cur_key
@@ -123,13 +113,9 @@ impl TreeData{
                     forward_key: NULL_KEY,
                     forward_steps: 0,
                     set_count: self.get_set_count(&val),
-                    age: 0,//set very low to force it to sync
                 });
-                self.sync_age(key);
             },
-            Some(oldval)=>{
-                self.sync_age(key);
-            }
+            Some(oldval)=>{}
         };
         key
     }
@@ -176,12 +162,13 @@ impl TreeData{
         else{
             self.increase_depth();
             let newkey = self.step_forward_rec(self.root, self.depth-1, cur_steps);
-            self.age += 1;
             self.root = newkey;
             self.depth -= 1;
             let magnitude = (8<<(self.depth-1)) as i64;
             self.offset = self.offset + Point{x:magnitude,y:magnitude};
-            self.garbage_collect();
+            if self.map.len() > 15000000{
+                self.garbage_collect();
+            }
             if steps_left != 0{
                 self.step_forward(steps_left);
             }
@@ -201,11 +188,10 @@ impl TreeData{
                 self.map.add(key, QuadTreeNode{
                     v: item.v,
                     forward_key: newkey,
-                    forward_steps: n_steps as u32,
+                    forward_steps: n_steps,
                     set_count: item.set_count,
-                    age: 0,
                 });
-                self.sync_age(key);
+                // self.sync_age(key);
             }
             newkey
         }
@@ -250,57 +236,25 @@ impl TreeData{
             self.add_array(finalarr)
         }
     }
-    fn sync_age(&mut self, root: u128){
-        let mut value = self.map.get(root).unwrap();
-        if value.age < self.age{
-            // need go get the value again, mutable this time to actually change it in the table
-            value.age = self.age;
-            self.map.add(root, value);
-            if !value.v.is_raw(){
-                for newroot in value.v.to_array().iter(){
-                    self.sync_age(*newroot);
-                }
-                if value.forward_key != NULL_KEY{
-                    self.sync_age(value.forward_key);
-                }
+    fn add_deps_to_tree(orig_table:&LargeKeyTable<QuadTreeNode>, new_table: &mut LargeKeyTable<QuadTreeNode>, root: u128){
+        // if not raw value
+        if !node_is_raw(root) && new_table.get(root).is_none(){
+            let node = orig_table.get(root).unwrap();
+            for newroot in node.v.to_array().iter(){
+                TreeData::add_deps_to_tree(orig_table, new_table, *newroot);
             }
+            if node.forward_key != NULL_KEY && !node_is_raw( node.forward_key){
+                TreeData::add_deps_to_tree(orig_table, new_table, node.forward_key);
+            }
+            new_table.add(root,node);
         }
-    }
-    fn is_collectable(&self, v: &QuadTreeNode) -> bool{
-        self.age > v.age + GARBAGE_COLLECTION_STEPS
-    }
-    fn get_percent_collectable(&self) -> f64{
-        let sample_size = 1000;
-        let mut count_tot = 0;
-        let mut count_collect = 0;
-        self.map.iter(&mut|key,v|{
-            count_collect += if self.is_collectable(v) { 1 } else { 0 };
-            count_tot+=1;
-
-            count_tot <= sample_size
-        });
-        (count_collect as f64) / (sample_size as f64)
     }
     fn garbage_collect(&mut self){
-        // if self.age % 3 == 0{
-        //     self.sync_age(self.root);
-        //     self.sync_age(*self.black_keys.last().unwrap());
-        // }
-        if self.get_percent_collectable() > 0.3 {
-            // self.sync_age(self.root);
-            // self.sync_age(*self.black_keys.last().unwrap());
-            let mut next_map = LargeKeyTable::new(self.map.table_size_log2);
-            self.map.iter(&mut |key, v|{
-                //make sure black keys are never removed
-                if !self.is_collectable(v){
-                    next_map.add(*key, *v);
-                }
-                true
-            });
-            println!("garbage collected: {}, final {}",self.map.len(), next_map.len());
-            self.map = next_map;
-        }
-        
+        let mut next_map = LargeKeyTable::new(self.map.table_size_log2);
+        //make sure black keys are in new map
+        TreeData::add_deps_to_tree(&self.map, &mut next_map, *self.black_keys.last().unwrap());
+        TreeData::add_deps_to_tree(&self.map, &mut next_map, self.root);
+        self.map = next_map;
     }
 
     fn gather_points_recurive(&mut self, prev_map: &HashMap<Point, u128>, depth: usize) -> HashMap<Point, u128>{
@@ -325,7 +279,6 @@ impl TreeData{
                         forward_key: NULL_KEY,
                         forward_steps: 0,
                         set_count: self.get_set_count(&value),
-                        age: self.age,
                     });
                     entry.insert(key);
                 }
