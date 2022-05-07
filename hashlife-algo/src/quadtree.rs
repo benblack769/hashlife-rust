@@ -59,7 +59,7 @@ pub struct TreeData{
     offset: Point,
 }
 impl TreeData{
-    fn new() -> TreeData{
+    pub fn new() -> TreeData{
         const INIT_SIZE_POW2: u8 = 1;
         const BLACK_BASE: u128 = 0;
         let mut tree_data = TreeData{
@@ -119,7 +119,7 @@ impl TreeData{
         };
         key
     }
-    pub fn increase_depth(&mut self){
+    fn increase_depth(&mut self){
         let l1m = self.map.get(self.root).unwrap().v.to_array();
         let bkeyd1 = self.black_key((self.depth-1) as usize);
         let smap = [
@@ -166,9 +166,6 @@ impl TreeData{
             self.depth -= 1;
             let magnitude = (8<<(self.depth-1)) as i64;
             self.offset = self.offset + Point{x:magnitude,y:magnitude};
-            if self.map.len() > 15000000{
-                self.garbage_collect();
-            }
             if steps_left != 0{
                 self.step_forward(steps_left);
             }
@@ -249,7 +246,7 @@ impl TreeData{
             new_table.add(root,node);
         }
     }
-    fn garbage_collect(&mut self){
+    pub fn garbage_collect(&mut self){
         let mut next_map = LargeKeyTable::new(self.map.table_size_log2);
         //make sure black keys are in new map
         TreeData::add_deps_to_tree(&self.map, &mut next_map, *self.black_keys.last().unwrap());

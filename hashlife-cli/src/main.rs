@@ -48,6 +48,9 @@ fn main() {
     while step_n < n_steps{
         let cur_steps = std::cmp::min(n_steps - step_n, MAX_STEPS);
         tree.step_forward(cur_steps);
+        if tree.hash_count() > 15000000{
+            tree.garbage_collect();
+        }
         step_n += cur_steps;
         let t = start_time.elapsed().as_secs_f64();
         println!("reached step {} at time {} (avg {}) hash size {}",step_n,t,t/step_n as f64, tree.hash_count());
