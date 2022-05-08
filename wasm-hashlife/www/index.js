@@ -18,12 +18,15 @@ var brightnessSelect = document.getElementById("brightness-select");
 brightnessSelect.addEventListener('change',render);
 cellSizeSelect.addEventListener('change',render);
 zoomSelect.addEventListener('change',render);
-
+var zoom_level = -1;
 function cellSize(){
-    return Math.pow(2,cellSizeSelect.value)
+    return Math.pow(2,parseInt(cellSizeSelect.value) + Math.floor((zoom_level < 0 ? -zoom_level : 0)))//cellSizeSelect.value)
+}
+function zoomLevel(){
+    return Math.max(0,Math.floor(zoom_level))
 }
 function zoomScale(){
-    return Math.pow(2, zoomSelect.value)/cellSize() 
+    return Math.pow(2, zoomLevel())/cellSize() 
 }
 function brightness(){
     return Math.pow(2,0.25*brightnessSelect.value)
@@ -36,7 +39,7 @@ var hashCountDisplay = document.getElementById("hash-count");
 function render(){
     // console.log(tree.hash_count());
     // console.log(tree.num_live_cells());
-    var map = tree.make_grayscale_map(xstart,ystart,xsize/cellSize(), ysize/cellSize(),cellSize(),zoomSelect.value,brightness());
+    var map = tree.make_grayscale_map(xstart,ystart,xsize/cellSize(), ysize/cellSize(),cellSize(),zoomLevel(),brightness());
     // console.log(map);
     var clamped_data = new Uint8ClampedArray(map);
     // console.log(clamped_data);
@@ -76,7 +79,16 @@ renderLoop();
 function handle_wheel(event){
     // console.log(event);
     if(event.ctrlKey){
-        console.log("zoomed! ",event.deltaY);
+        console.log("zoomed! ",event.deltaY,event);
+        var oldscale = zoomScale();
+        var cenx = xstart + event.offsetX*oldscale;
+        var ceny = ystart + event.offsetY*oldscale;
+        zoom_level -= event.deltaY*0.03;
+        zoom_level = Math.max(zoom_level, -5);
+        zoom_level = Math.min(zoom_level, 11);
+        var newscale = zoomScale();
+        xstart = cenx - event.offsetX*newscale;
+        ystart = ceny - event.offsetY*newscale;
     }
     else{
         xstart += event.deltaX*zoomScale();
@@ -85,7 +97,7 @@ function handle_wheel(event){
     render();
     event.stopPropagation();
 }
-canvas.addEventListener("wheel", handle_wheel);
+canvas.addEventListener("wheel", handle_wheel, false);
 
 var inputFileLoader = document.getElementById("rle-file-input");
 function handleFileUpload() {
