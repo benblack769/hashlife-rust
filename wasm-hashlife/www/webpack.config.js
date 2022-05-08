@@ -11,4 +11,7 @@ module.exports = {
   plugins: [
     new CopyWebpackPlugin(['index.html'])
   ],
+  // use: {
+  //   loader: 'url-loader',
+  // },
 };

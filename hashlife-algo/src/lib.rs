@@ -8,6 +8,17 @@ pub use crate::point::{Point};
 pub use crate::quadtree::{TreeData};
 pub use crate::rle::*;
 
+pub fn tile_bytes(arr:&[u8],xsize:usize,tile:usize)->Vec<u8>{
+    //use to zoom up the grayscale map
+    assert!(arr.len()%xsize == 0);
+    (0..arr.len()/xsize)
+    .map(|y|std::iter::repeat(&arr[(y*xsize)..((y+1)*xsize)]).take(tile))
+    .into_iter().flatten()
+    .into_iter().flatten()
+    .map(|v|std::iter::repeat(*v).take(tile))
+    .into_iter().flatten()
+    .collect()
+}
 
 #[cfg(test)]
 mod tests {
@@ -115,9 +126,6 @@ mod tests {
 
         let points = parse_fle_file(contents);
         let mut tree = TreeData::gather_all_points(&points);
-        tree.increase_depth();
-        tree.increase_depth();
-        // tree.step_forward(1);
         let out_points = tree.dump_all_points();
         let rle_tot_str = write_rle(&out_points);
         assert_eq!(expected, rle_tot_str);

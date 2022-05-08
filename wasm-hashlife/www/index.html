@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>Hello wasm-pack!</title>
     <style>
-      body {
+      #game-of-life-canvas {
         position: absolute;
         top: 0;
         left: 0;
@@ -15,11 +15,56 @@
         align-items: center;
         justify-content: center;
       }
+      #gol-options{
+        position: absolute;
+        top: 0;
+        left: 0;
+        background-color: rgba(255,255,255,0.2);
+        z-index: 1;
+      }
     </style>
   </head>
   <body>
     <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
     <body>
+      <div id="gol-options">
+        <div>
+          <span>Speed</span>
+          <input id="speed-select" type="range" min="0" max="20" value="1" class="slider">
+        </div>
+        <div>
+          <span>FPS</span>
+          <input id="fps-select" type="range" min="-4" max="12" value="4" class="slider">
+        </div>
+        <div>
+          <span>Garbage collection</span>
+          <input id="garbage-select" type="range" min="18" max="30" value="24" class="slider">
+        </div>
+        <div>
+          <span>Zoom</span>
+          <input id="zoom-select" type="range" min="0" max="10" value="0" class="slider">
+        </div>
+        <div>
+          <span>Cell Size</span>
+          <input id="cell-size-select" type="range" min="0" max="6" value="2" class="slider">
+        </div>
+        <div>
+          <span>Brighness</span>
+          <input id="brightness-select" type="range" min="0" max="64" value="0" class="slider">
+        </div>
+        <div>
+          Live cells:
+          <span id="cell-count"></span>
+        </div>
+        <div>
+          Hash count:
+          <span id="hash-count"></span>
+        </div>
+        <div>
+          <span>Load file</span>
+          <input id="rle-file-input" type="file">
+        </div>
+      </div>
       <canvas id="game-of-life-canvas"></canvas>
     </body>
     <script src="./bootstrap.js"></script>

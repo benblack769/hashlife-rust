@@ -1,7 +1,7 @@
 mod utils;
 
 use wasm_bindgen::prelude::*;
-use hashlife_fast::{TreeData,Point, parse_fle_file, write_rle};
+use hashlife_fast::{TreeData,Point, parse_fle_file, write_rle,tile_bytes};
 use crate::utils::set_panic_hook;
 // // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // // allocator.
@@ -25,8 +25,8 @@ impl TreeDataWrapper{
     pub fn get_rle(&self)->String{write_rle(&self.tree.dump_all_points())}
     pub fn make_from_rle(rle:&str)->TreeDataWrapper{TreeDataWrapper { tree: TreeData::gather_all_points(&parse_fle_file(rle)) }}
     pub fn garbage_collect(&mut self){self.tree.garbage_collect();}
-    pub fn make_grayscale_map(&self, xstart:i32,ystart:i32, xsize: u32, ysize: u32, zoom: u8, brightness: f64) -> Vec<u8> {
-        gray_to_rgba(&self.tree.make_grayscale_map(Point{x:xstart as i64,y:ystart as i64},xsize as usize,ysize as usize,zoom,brightness)[..])
+    pub fn make_grayscale_map(&self, xstart:i32,ystart:i32, xsize: u32, ysize: u32, cellsize: u32, zoom: u8, brightness: f64) -> Vec<u8> {
+        gray_to_rgba(&tile_bytes(&self.tree.make_grayscale_map(Point{x:xstart as i64,y:ystart as i64},xsize as usize,ysize as usize,zoom,brightness)[..],xsize as usize,cellsize as usize))
     }
 
 }
