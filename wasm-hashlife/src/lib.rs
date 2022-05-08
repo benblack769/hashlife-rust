@@ -22,6 +22,7 @@ impl TreeDataWrapper{
     pub fn step_forward(&mut self, n_steps: u32){self.tree.step_forward(n_steps as u64);}
     pub fn num_live_cells(&mut self)->u64{self.tree.num_live_cells()}
     pub fn hash_count(&mut self)->usize{self.tree.hash_count()}
+    pub fn get_age(&mut self)->u32{self.tree.get_age() as u32}
     pub fn get_rle(&self)->String{write_rle(&self.tree.dump_all_points())}
     pub fn make_from_rle(rle:&str)->TreeDataWrapper{TreeDataWrapper { tree: TreeData::gather_all_points(&parse_fle_file(rle)) }}
     pub fn garbage_collect(&mut self){self.tree.garbage_collect();}

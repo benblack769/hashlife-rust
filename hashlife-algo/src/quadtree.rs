@@ -57,6 +57,7 @@ pub struct TreeData{
     root: u128,
     depth: u64,
     offset: Point,
+    age: u64,
 }
 impl TreeData{
     pub fn new() -> TreeData{
@@ -68,6 +69,7 @@ impl TreeData{
             root: BLACK_BASE,
             depth: 0,
             offset: Point{x:0,y:0},
+            age: 0,
         };
         // extend the tree so that increase_size() method can be called
         tree_data.root = tree_data.black_key(1);
@@ -164,6 +166,7 @@ impl TreeData{
             let newkey = self.step_forward_rec(self.root, self.depth-1, cur_steps);
             self.root = newkey;
             self.depth -= 1;
+            self.age += cur_steps;
             let magnitude = (8<<(self.depth-1)) as i64;
             self.offset = self.offset + Point{x:magnitude,y:magnitude};
             if steps_left != 0{
@@ -305,6 +308,10 @@ impl TreeData{
     pub fn hash_count(&self)->usize{
         self.map.len()
     }
+    pub fn get_age(&self)->u64{
+        self.age
+    }
+    
         
     fn iter_grayscale_points<F>(&self, root: u128, depth: i64, cur_loc: Point, fun:&mut F)
     where

@@ -17,6 +17,7 @@
       }
       #gol-options{
         position: absolute;
+        color: white;
         top: 0;
         left: 0;
         background-color: rgba(255,255,255,0.2);
@@ -40,14 +41,14 @@
           <span>Garbage collection</span>
           <input id="garbage-select" type="range" min="18" max="30" value="24" class="slider">
         </div>
-        <div>
+        <!--<div>
           <span>Zoom</span>
           <input id="zoom-select" type="range" min="0" max="10" value="0" class="slider">
         </div>
         <div>
           <span>Cell Size</span>
           <input id="cell-size-select" type="range" min="0" max="6" value="0" class="slider">
-        </div>
+        </div>-->
         <div>
           <span>Brighness</span>
           <input id="brightness-select" type="range" min="0" max="64" value="0" class="slider">
@@ -57,12 +58,22 @@
           <span id="cell-count"></span>
         </div>
         <div>
+          Age:
+          <span id="universe-age"></span>
+        </div>
+        <div>
           Hash count:
           <span id="hash-count"></span>
         </div>
         <div>
           <span>Load file</span>
           <input id="rle-file-input" type="file">
+        </div>
+        <div>
+          <button id="reset-bounding-box">Home</button>
+        </div>
+        <div>
+          <button id="download-rle">Download</button>
         </div>
       </div>
       <canvas id="game-of-life-canvas"></canvas>
