@@ -1,4 +1,11 @@
-import {paniky, set_panic_hook_js, ExampleStruct, TreeDataWrapper} from "wasm-game-of-life";
+import init, { paniky, set_panic_hook_js, ExampleStruct, TreeDataWrapper } from './wasm_hashlife_bg.js';
+
+async function run() {
+    await init();
+
+    // const set_panic_hook_js = exports.set_panic_hook_js;
+    // const TreeDataWrapper = exports.TreeDataWrapper;
+// import {paniky, set_panic_hook_js, ExampleStruct, TreeDataWrapper} from "wasm-game-of-life";
 
 set_panic_hook_js();
 
@@ -166,3 +173,5 @@ downloadButton.addEventListener("click", downloadRLE, false);
 
 renderLoop();
 resetBoundingBox()
+}
+run()
