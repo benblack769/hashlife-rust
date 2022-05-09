@@ -16,8 +16,10 @@ const RLE_STR = (
 );
 var tree = TreeDataWrapper.make_from_rle(RLE_STR);
 var canvas = document.getElementById("game-of-life-canvas");
-var xsize = window.innerWidth - 50;
-var ysize = window.innerHeight - 50;
+var xsize = window.innerWidth- 10;
+var ysize = window.innerHeight- 10;
+canvas.width = xsize;
+canvas.height = ysize;
 var xstart = 0;
 var ystart = 0;
 // var cellSizeSelect = document.getElementById("cell-size-select");
@@ -63,9 +65,16 @@ function render(){
     hashCountDisplay.innerText = tree.hash_count();
     ageDisplay.innerText = tree.get_age();
 }
+function clearCanvas(){
+    var ctx = canvas.getContext('2d');
+    
+    // fill the entire canvas with black before drawing the circles
+    ctx.fillStyle='black';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+}
 window.onresize = function(event) {
-    xsize = window.innerWidth - 50;
-    ysize = window.innerHeight - 50;
+    xsize = window.innerWidth- 10;
+    ysize = window.innerHeight- 10;
     canvas.width = xsize;
     canvas.height = ysize;
     // isZooming();
@@ -87,7 +96,7 @@ const renderLoop = () => {
 
 function bound_zoom(zoom_level){
     zoom_level = Math.max(zoom_level, -5);
-    zoom_level = Math.min(zoom_level, 11);
+    zoom_level = Math.min(zoom_level, 12);
     return zoom_level;
 }
 function handle_wheel(event){
@@ -115,6 +124,7 @@ var filedata = RLE_STR;
 var xyfilecoord = [12,8];
 var inputFileLoader = document.getElementById("rle-file-input");
 function handleFileUpload() {
+    clearCanvas();
     var file = inputFileLoader.files[0];
     filename = file.name;
     const reader = new FileReader();
@@ -149,8 +159,8 @@ function resetBoundingBox(){
     let ycen = scale*canvas.height/2;
     xstart = filex / 2 - xcen;
     ystart = filey / 2 - ycen;
+    brightnessSelect.value = Math.max(1,Math.floor(zoom_level)*4)
 }
-resetBoundingBox()
 var resetBoundingButton = document.getElementById("reset-bounding-box")
 resetBoundingButton.addEventListener("click", resetBoundingBox, false);
 var downloadButton = document.getElementById("download-rle")
@@ -171,7 +181,8 @@ function downloadRLE(){
 }
 downloadButton.addEventListener("click", downloadRLE, false);
 
-renderLoop();
+clearCanvas()
 resetBoundingBox()
+renderLoop()
 }
 run()

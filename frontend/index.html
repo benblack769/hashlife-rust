@@ -5,15 +5,14 @@
     <title>Hello wasm-pack!</title>
     <style>
       #game-of-life-canvas {
+      }
+      #canvas-holder{
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+        background-color: black;
       }
       #gol-options{
         position: absolute;
@@ -41,14 +40,6 @@
           <span>Garbage collection</span>
           <input id="garbage-select" type="range" min="18" max="30" value="24" class="slider">
         </div>
-        <!--<div>
-          <span>Zoom</span>
-          <input id="zoom-select" type="range" min="0" max="10" value="0" class="slider">
-        </div>
-        <div>
-          <span>Cell Size</span>
-          <input id="cell-size-select" type="range" min="0" max="6" value="0" class="slider">
-        </div>-->
         <div>
           <span>Brighness</span>
           <input id="brightness-select" type="range" min="0" max="64" value="0" class="slider">
@@ -76,8 +67,11 @@
           <button id="download-rle">Download</button>
         </div>
       </div>
-      <canvas id="game-of-life-canvas"></canvas>
+      <div id="canvas-holder">
+        <canvas id="game-of-life-canvas"></canvas>
+      </div>
     </body>
+    <script src="wasm_hashlife_bg.js" type="module"></script>
     <script src="index.js" type="module"></script>
   </body>
 </html>
