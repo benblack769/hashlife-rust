@@ -1,15 +1,19 @@
 use std::hash::Hasher;
+use std::intrinsics::transmute;
+use std::mem::size_of;
 
 use crate::largekey_table::LargeKeyTable;
+use crate::serialize;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
 use metrohash::MetroHash128;
 use crate::point::Point;
 use crate::raw_ops::*;
+use crate::serialize::*;
 
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub struct QuadTreeValue{
     lt: u128,
     rt: u128,
@@ -43,7 +47,7 @@ impl QuadTreeValue{
         node_is_raw(self.lt)
     }
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 struct QuadTreeNode{
     v: QuadTreeValue,
     forward_key: u128,
@@ -59,10 +63,11 @@ pub struct TreeData{
     offset: Point,
     age: u64,
 }
+
+const BLACK_BASE: u128 = 0;
 impl TreeData{
     pub fn new() -> TreeData{
         const INIT_SIZE_POW2: u8 = 1;
-        const BLACK_BASE: u128 = 0;
         let mut tree_data = TreeData{
             map: LargeKeyTable::new(INIT_SIZE_POW2),
             black_keys: vec![BLACK_BASE],
@@ -249,13 +254,57 @@ impl TreeData{
             new_table.add(root,node);
         }
     }
-    pub fn garbage_collect(&mut self){
+    pub fn pruned_tree(&self)->TreeData{
         let mut next_map = LargeKeyTable::new(self.map.table_size_log2);
         //make sure black keys are in new map
-        TreeData::add_deps_to_tree(&self.map, &mut next_map, *self.black_keys.last().unwrap());
         TreeData::add_deps_to_tree(&self.map, &mut next_map, self.root);
-        self.map = next_map;
+        TreeData{
+            map: next_map,
+            black_keys: vec![BLACK_BASE],
+            root: self.root,
+            depth: self.depth,
+            offset: self.offset,
+            age: self.age,
+        }
     }
+    pub fn serialize_treerepr(&self)->Vec<u8>{    
+        const SERIAL_SIZE:usize = std::mem::size_of::<(u128,QuadTreeNode)>();
+        const HEADER_SIZE:usize = 8*8;
+        let mut res: Vec<u8> = Vec::with_capacity(self.map.len()*SERIAL_SIZE+HEADER_SIZE);
+        serialize::serialize_transmutable::<u128>(&mut res, self.root);
+        serialize::serialize_transmutable::<Point>(&mut res, self.offset);
+        serialize::serialize_transmutable::<u64>(&mut res, self.depth);
+        serialize::serialize_transmutable::<u64>(&mut res, self.map.len() as u64);
+        serialize::serialize_transmutable::<u64>(&mut res, self.age);
+        self.map.iter(&mut|key,value|{
+            serialize::serialize_transmutable::<(u128,QuadTreeNode)>(&mut res, (*key, *value));
+            true
+        });
+        //no need to serialize black keys, easy enough to recompute, already in tree.
+        res
+    }
+    pub fn deserialize_treerepr(data: &[u8])->TreeData{
+        let mut dataiter = data.iter();
+        let root = serialize::deserialize_transmutable::<u128>(&mut dataiter).unwrap();
+        let offset = serialize::deserialize_transmutable::<Point>(&mut dataiter).unwrap();
+        let depth = serialize::deserialize_transmutable::<u64>(&mut dataiter).unwrap();
+        let length = serialize::deserialize_transmutable::<u64>(&mut dataiter).unwrap();
+        let age = serialize::deserialize_transmutable::<u64>(&mut dataiter).unwrap();
+        let capacity_log2 = 64 - (length+1).leading_zeros() + 1;
+        let mut new_map = LargeKeyTable::new(capacity_log2 as u8);
+        for _ in 0..length{
+            let (key, value) = serialize::deserialize_transmutable::<(u128,QuadTreeNode)>(&mut dataiter).unwrap();
+            new_map.add(key, value);
+        }
+        TreeData{
+            map: new_map,
+            black_keys: vec![BLACK_BASE],
+            root: root,
+            depth: depth,
+            offset: offset,
+            age: age,
+        }
+    }   
 
     fn gather_points_recurive(&mut self, prev_map: &HashMap<Point, u128>, depth: usize) -> HashMap<Point, u128>{
         let mut map: HashMap<Point, u128> = HashMap::new();
@@ -418,4 +467,3 @@ fn child_points(p:Point) -> [Point;4] {
         Point{x:p.x*2+1, y:p.y*2+1},
     ]
 }
-

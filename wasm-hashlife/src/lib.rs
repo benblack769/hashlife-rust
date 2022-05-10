@@ -25,10 +25,12 @@ impl TreeDataWrapper{
     pub fn get_age(&mut self)->u32{self.tree.get_age() as u32}
     pub fn get_rle(&self)->String{write_rle(&self.tree.dump_all_points())}
     pub fn make_from_rle(rle:&str)->TreeDataWrapper{TreeDataWrapper { tree: TreeData::gather_all_points(&parse_fle_file(rle)) }}
-    pub fn garbage_collect(&mut self){self.tree.garbage_collect();}
+    pub fn pruned_tree(&self)->TreeDataWrapper{ TreeDataWrapper { tree: self.tree.pruned_tree() } }
     pub fn make_grayscale_map(&self, xstart:i32,ystart:i32, xsize: u32, ysize: u32, cellsize: u32, zoom: u8, brightness: f64) -> Vec<u8> {
         gray_to_rgba(&tile_bytes(&self.tree.make_grayscale_map(Point{x:xstart as i64,y:ystart as i64},xsize as usize,ysize as usize,zoom,brightness)[..],xsize as usize,cellsize as usize))
     }
+    pub fn serialize_treerepr(&self)->Vec<u8>{ self.tree.serialize_treerepr() }
+    pub fn deserialize_treerepr(data: &[u8])->TreeDataWrapper{ TreeDataWrapper { tree: TreeData::deserialize_treerepr(data) } }
 
 }
 #[wasm_bindgen]

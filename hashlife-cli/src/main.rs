@@ -40,7 +40,7 @@ fn main() {
     let start_time = Instant::now();
     let mut tree = TreeData::gather_all_points(&points);
     println!("finished gathering");
-    let MAX_STEPS = 1<<13;
+    let MAX_STEPS = 1<<9;
     let mut step_n = 0;
     let mut frame = 0;
     let xsize = 800;
@@ -49,7 +49,10 @@ fn main() {
         let cur_steps = std::cmp::min(n_steps - step_n, MAX_STEPS);
         tree.step_forward(cur_steps);
         if tree.hash_count() > 15000000{
-            tree.garbage_collect();
+            let bef_garbage_tree_size = tree.hash_count();
+            tree = tree.pruned_tree();
+            let aft_garbage_tree_size = tree.hash_count();
+            println!("Garbage collected, Bef: {},\t Aft: {}",bef_garbage_tree_size,aft_garbage_tree_size);
         }
         step_n += cur_steps;
         let t = start_time.elapsed().as_secs_f64();

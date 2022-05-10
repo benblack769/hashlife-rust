@@ -8,8 +8,8 @@ from pathlib import Path
 #     shutil.rmtree("build")
 # os.mkdir("build")
 
-# shutil.copy("../wasm-hashlife/pkg/wasm_hashlife_bg.wasm","build/wasm_hashlife_bg.wasm");
-# shutil.copy("../wasm-hashlife/pkg/wasm_hashlife.js","build/wasm_hashlife_bg.js");
+shutil.copy("../wasm-hashlife/pkg/wasm_hashlife_bg.wasm","wasm_hashlife_bg.wasm");
+shutil.copy("../wasm-hashlife/pkg/wasm_hashlife.js","wasm_hashlife_bg.js");
 
 for subpath in Path("examples").iterdir():
     print(subpath)

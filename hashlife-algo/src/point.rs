@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use std::ops;
 
 
-#[derive(Copy,Clone,Hash,PartialEq,Eq)]
+#[derive(Copy,Clone,Default,Hash,PartialEq,Eq)]
 pub struct Point{
     pub x:i64,
     pub y:i64,
