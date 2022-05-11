@@ -3,11 +3,6 @@ import init, { paniky, set_panic_hook_js, ExampleStruct, TreeDataWrapper } from 
 async function run() {
     await init();
 
-    // const set_panic_hook_js = exports.set_panic_hook_js;
-    // const TreeDataWrapper = exports.TreeDataWrapper;
-// import {paniky, set_panic_hook_js, ExampleStruct, TreeDataWrapper} from "wasm-game-of-life";
-
-set_panic_hook_js();
 
 var filename = "example_spaceship.rle";
 const RLE_STR = (
@@ -18,17 +13,28 @@ var tree = TreeDataWrapper.make_from_rle(RLE_STR);
 var canvas = document.getElementById("game-of-life-canvas");
 var xsize = window.innerWidth- 10;
 var ysize = window.innerHeight- 10;
-canvas.width = xsize;
-canvas.height = ysize;
 var xstart = 0;
 var ystart = 0;
-// var cellSizeSelect = document.getElementById("cell-size-select");
-// var zoomSelect = document.getElementById("zoom-select");
 var brightnessSelect = document.getElementById("brightness-select");
-brightnessSelect.addEventListener('change',render);
-// cellSizeSelect.addEventListener('change',render);
-// zoomSelect.addEventListener('change',render);
+var cellCountDisplay = document.getElementById("cell-count");
+var hashCountDisplay = document.getElementById("hash-count");
+var ageDisplay = document.getElementById("universe-age");
+var speedSelect = document.getElementById("speed-select");
+var fpsSelect = document.getElementById("fps-select");
+var garbageSelect = document.getElementById("garbage-select");
+var filedata = RLE_STR;
+var xyfilecoord = [12,8];
+var inputFileLoader = document.getElementById("rle-file-input");
+var resetBoundingButton = document.getElementById("reset-bounding-box")
+var downloadButton = document.getElementById("download-rle")
+var downloadButton = document.getElementById("download-rle")
 var zoom_level = -1;
+const myWorker = new Worker("worker.js", {type: "module"});
+
+const play = "⏵︎";
+const pause = "⏸︎";
+var play_pause = document.getElementById("play-pause")
+
 function cellSize(){
     return Math.pow(2, Math.floor((zoom_level < 0 ? -zoom_level : 0)))//cellSizeSelect.value)
 }
@@ -44,9 +50,6 @@ function brightness(){
 function roundToCell(size){
     return Math.floor(size/cellSize())*cellSize()
 }
-var cellCountDisplay = document.getElementById("cell-count");
-var hashCountDisplay = document.getElementById("hash-count");
-var ageDisplay = document.getElementById("universe-age");
 function render(){
     // console.log(tree.hash_count());
     // console.log(tree.num_live_cells());
@@ -72,16 +75,6 @@ function clearCanvas(){
     ctx.fillStyle='black';
     ctx.fillRect(0,0,canvas.width,canvas.height);
 }
-window.onresize = function(event) {
-    xsize = window.innerWidth- 10;
-    ysize = window.innerHeight- 10;
-    canvas.width = xsize;
-    canvas.height = ysize;
-    // isZooming();
-};
-var speedSelect = document.getElementById("speed-select");
-var fpsSelect = document.getElementById("fps-select");
-var garbageSelect = document.getElementById("garbage-select");
 const renderLoop = () => {
     render();
     if (speedSelect.value > 0){
@@ -119,10 +112,6 @@ function handle_wheel(event){
     render();
     event.stopPropagation();
 }
-canvas.addEventListener("wheel", handle_wheel, false);
-var filedata = RLE_STR;
-var xyfilecoord = [12,8];
-var inputFileLoader = document.getElementById("rle-file-input");
 function handleFileUpload() {
     clearCanvas();
     var file = inputFileLoader.files[0];
@@ -136,7 +125,6 @@ function handleFileUpload() {
     }
     reader.readAsText(file);
 }
-inputFileLoader.addEventListener("change", handleFileUpload, false);
 function parseBoundingBox(){
     var boundsline = filedata.split('\n').filter((l)=>l[0] != "#")[0]
     const numregex = /\d+/g;
@@ -161,9 +149,6 @@ function resetBoundingBox(){
     ystart = filey / 2 - ycen;
     brightnessSelect.value = Math.max(1,Math.floor(zoom_level)*4)
 }
-var resetBoundingButton = document.getElementById("reset-bounding-box")
-resetBoundingButton.addEventListener("click", resetBoundingBox, false);
-var downloadButton = document.getElementById("download-rle")
 function downloadText(text, filename){
   var element = document.createElement('a');
   element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
@@ -179,8 +164,33 @@ function downloadText(text, filename){
 function downloadRLE(){
     downloadText(tree.get_rle(),filename+"."+tree.get_age());
 }
-downloadButton.addEventListener("click", downloadRLE, false);
+function onWindowResize(event){
+    xsize = window.innerWidth- 10;
+    ysize = window.innerHeight- 10;
+    canvas.width = xsize;
+    canvas.height = ysize;
+}
+function handleWebWorker(e){
+    var workerData = e.data;
+    console.log('Message received from worker');
+    console.log(workerData);
+    
+}
 
+brightnessSelect.addEventListener('change',render);
+resetBoundingButton.addEventListener("click", resetBoundingBox, false);
+downloadButton.addEventListener("click", downloadRLE, false);
+inputFileLoader.addEventListener("change", handleFileUpload, false);
+canvas.addEventListener("wheel", handle_wheel, false);
+window.addEventListener('resize', onWindowResize);
+
+myWorker.onmessage = handleWebWorker
+
+canvas.width = xsize;
+canvas.height = ysize;
+
+set_panic_hook_js();
+handleWebWorker()
 clearCanvas()
 resetBoundingBox()
 renderLoop()
