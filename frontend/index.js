@@ -10,6 +10,7 @@ const RLE_STR = (
     "5bob2o$4bo6bo$3b2o3bo2bo$2obo5b2o$2obo5b2o$3b2o3bo2bo$4bo6bo$5bob2o!\n"
 );
 var tree = TreeDataWrapper.make_from_rle(RLE_STR);
+var workerhashcount = 0;
 var canvas = document.getElementById("game-of-life-canvas");
 var xsize = window.innerWidth- 10;
 var ysize = window.innerHeight- 10;
@@ -17,7 +18,8 @@ var xstart = 0;
 var ystart = 0;
 var brightnessSelect = document.getElementById("brightness-select");
 var cellCountDisplay = document.getElementById("cell-count");
-var hashCountDisplay = document.getElementById("hash-count");
+var hashCountDisplay = document.getElementById("cached-hash-count");
+var staticHashCountDisplay = document.getElementById("static-hash-count");
 var ageDisplay = document.getElementById("universe-age");
 var speedSelect = document.getElementById("speed-select");
 var fpsSelect = document.getElementById("fps-select");
@@ -31,6 +33,8 @@ var downloadButton = document.getElementById("download-rle")
 var zoom_level = -1;
 const myWorker = new Worker("worker.js", {type: "module"});
 var last_step_time = 0;
+var needs_render = true;
+
 
 const play = "⏵︎";
 const pause = "⏸︎";
@@ -51,7 +55,13 @@ function brightness(){
 function roundToCell(size){
     return Math.floor(size/cellSize())*cellSize()
 }
-function render(){
+function actualRender(){
+    requestAnimationFrame(actualRender);
+    if (!needs_render){
+        return false;
+    }
+    needs_render = false;
+    console.log("rendered!")
     // console.log(tree.hash_count());
     // console.log(tree.num_live_cells());
     var map = tree.make_grayscale_map(xstart,ystart,xsize/cellSize(), ysize/cellSize(),cellSize(),zoomLevel(),brightness());
@@ -66,8 +76,12 @@ function render(){
     canvasContext.imageSmoothingEnabled = false;
     canvasContext.putImageData(img_data, 0, 0);
     cellCountDisplay.innerText = tree.num_live_cells();
-    hashCountDisplay.innerText = tree.hash_count();
+    staticHashCountDisplay.innerText = tree.hash_count();
+    hashCountDisplay.innerText = workerhashcount;
     ageDisplay.innerText = tree.get_age();
+}
+function render(){
+    needs_render = true;
 }
 function clearCanvas(){
     var ctx = canvas.getContext('2d');
@@ -88,7 +102,7 @@ const renderLoop = () => {
         setTimeout(renderLoop, desired_interval);
     }
     else{
-        setTimeout(renderLoop, desired_interval - (cur_step_time - last_step_time));
+        // setTimeout(renderLoop, desired_interval - (cur_step_time - last_step_time));
     }
 };
 
@@ -129,6 +143,7 @@ function handleFileUpload() {
             data: filedata,
         });
         //make sure to keep a local copy at all times
+        tree.free()
         tree = TreeDataWrapper.make_from_rle(filedata);
         parseBoundingBox()
         resetBoundingBox()
@@ -196,7 +211,9 @@ function handleWebWorker(e){
         renderLoop()
     }
     if (workerData.type === "serialized_tree"){
+        tree.free();
         tree = TreeDataWrapper.deserialize_treerepr(workerData.data);
+        workerhashcount = workerData.hash_count;
         render();
         renderLoop();
     }
@@ -204,7 +221,7 @@ function handleWebWorker(e){
 function handleGarbageSelect(e){
     myWorker.postMessage({
         type: "set_garbage_limit",
-        amount: garbageSelect.value,
+        amount: Math.pow(2,garbageSelect.value),
     })
 }
 
@@ -225,8 +242,9 @@ set_panic_hook_js();
 clearCanvas()
 resetBoundingBox()
 
-//make first render locally
-render()
+//request first render
+actualRender()
+requestAnimationFrame(actualRender);
 
 }
 run()
