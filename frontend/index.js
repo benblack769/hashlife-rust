@@ -30,6 +30,7 @@ var downloadButton = document.getElementById("download-rle")
 var downloadButton = document.getElementById("download-rle")
 var zoom_level = -1;
 const myWorker = new Worker("worker.js", {type: "module"});
+var last_step_time = 0;
 
 const play = "⏵︎";
 const pause = "⏸︎";
@@ -57,7 +58,7 @@ function render(){
     // console.log(map);
     var clamped_data = new Uint8ClampedArray(map);
     // console.log(clamped_data);
-    var img_data =new ImageData(clamped_data,roundToCell(xsize),roundToCell(ysize));
+    var img_data = new ImageData(clamped_data,roundToCell(xsize),roundToCell(ysize));
     // console.log(img_data);
     canvas.width = xsize;
     canvas.height = ysize;
@@ -76,15 +77,19 @@ function clearCanvas(){
     ctx.fillRect(0,0,canvas.width,canvas.height);
 }
 const renderLoop = () => {
-    render();
-    if (speedSelect.value > 0){
-        tree.step_forward(Math.pow(2,speedSelect.value));
+    const desired_interval = 1000/Math.pow(2,fpsSelect.value/2.);
+    const cur_step_time = new Date().getTime();
+    if (cur_step_time - last_step_time > desired_interval-5){
+        myWorker.postMessage({
+            type: "step_forward",
+            amount: Math.pow(2,speedSelect.value),
+        });
+        last_step_time = cur_step_time;
+        setTimeout(renderLoop, desired_interval);
     }
-    if (tree.hash_count() > 0.9*garbageSelect){
-        tree.garbage_collect();
+    else{
+        setTimeout(renderLoop, desired_interval - (cur_step_time - last_step_time));
     }
-    console.log(window.screen.availWidth / document.documentElement.clientWidth);
-    setTimeout(renderLoop, 1000/Math.pow(2,fpsSelect.value/2.));
 };
 
 function bound_zoom(zoom_level){
@@ -119,6 +124,11 @@ function handleFileUpload() {
     const reader = new FileReader();
     reader.onload = function(){
         filedata = reader.result;
+        myWorker.postMessage({
+            type: "set_rle",
+            data: filedata,
+        });
+        //make sure to keep a local copy at all times
         tree = TreeDataWrapper.make_from_rle(filedata);
         parseBoundingBox()
         resetBoundingBox()
@@ -174,12 +184,34 @@ function handleWebWorker(e){
     var workerData = e.data;
     console.log('Message received from worker');
     console.log(workerData);
-    
+    if (workerData.type === "ready"){
+        //initialize web worker with default RLE
+        myWorker.postMessage({
+            type: "set_rle",
+            data: RLE_STR,
+        });
+        //initialize web worker garbage select value
+        handleGarbageSelect();
+        //start calc-render loop
+        renderLoop()
+    }
+    if (workerData.type === "serialized_tree"){
+        tree = TreeDataWrapper.deserialize_treerepr(workerData.data);
+        render();
+        renderLoop();
+    }
+}
+function handleGarbageSelect(e){
+    myWorker.postMessage({
+        type: "set_garbage_limit",
+        amount: garbageSelect.value,
+    })
 }
 
 brightnessSelect.addEventListener('change',render);
 resetBoundingButton.addEventListener("click", resetBoundingBox, false);
 downloadButton.addEventListener("click", downloadRLE, false);
+garbageSelect.addEventListener('change', handleGarbageSelect);
 inputFileLoader.addEventListener("change", handleFileUpload, false);
 canvas.addEventListener("wheel", handle_wheel, false);
 window.addEventListener('resize', onWindowResize);
@@ -190,9 +222,11 @@ canvas.width = xsize;
 canvas.height = ysize;
 
 set_panic_hook_js();
-handleWebWorker()
 clearCanvas()
 resetBoundingBox()
-renderLoop()
+
+//make first render locally
+render()
+
 }
 run()
