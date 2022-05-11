@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Hello wasm-pack!</title>
+    <style>
+      #game-of-life-canvas {
+      }
+      #canvas-holder{
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: black;
+      }
+      #gol-options{
+        position: absolute;
+        color: white;
+        top: 0;
+        left: 0;
+        background-color: rgba(255,255,255,0.2);
+        z-index: 1;
+      }
+      #button-holder{
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        z-index: 1;
+      }
+      .control-button{
+        width:100px;
+        height: 100px;
+        border-radius:100%;
+        background-color: gray;
+        align-items:center;
+        justify-content:center;
+        font-size:2.3em;
+        display: inline-block;
+      }
+      
+      .button-icon{
+        /*taken from https://css-tricks.com/making-pure-css-playpause-button */
+        box-sizing: border-box;
+        height: 48px;
+        
+        border-color: transparent transparent transparent #202020;
+        transition: 100ms all ease;
+        will-change: border-width;
+        cursor: pointer;
+
+      }
+      
+      .button_pause {
+          border-style: double;
+          border-width: 0px 0 0px 60px;
+        }
+        .button_play {
+        border-style: solid;
+        border-width: 24px 0 24px 40px;
+        }
+      .control-button:hover{
+        background-color: white;
+        cursor: pointer	;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
+    <body>
+      <div id="gol-options">
+        <div>
+          <span>Speed</span>
+          <input id="speed-select" type="range" min="0" max="20" value="1" class="slider">
+        </div>
+        <div>
+          <span>FPS</span>
+          <input id="fps-select" type="range" min="-4" max="12" value="4" class="slider">
+        </div>
+        <div>
+          <span>Garbage collection</span>
+          <input id="garbage-select" type="range" min="18" max="30" value="24" class="slider">
+        </div>
+        <div>
+          <span>Brighness</span>
+          <input id="brightness-select" type="range" min="0" max="64" value="0" class="slider">
+        </div>
+        <div>
+          Live cells:
+          <span id="cell-count"></span>
+        </div>
+        <div>
+          Age:
+          <span id="universe-age"></span>
+        </div>
+        <div>
+          Cached hash count:
+          <span id="cached-hash-count"></span>
+        </div>
+        <div>
+          Static hash count:
+          <span id="static-hash-count"></span>
+        </div>
+        <div>
+          <span>Load file</span>
+          <input id="rle-file-input" type="file">
+        </div>
+        <div>
+          <button id="reset-bounding-box">Home</button>
+        </div>
+        <div>
+          <button id="download-rle">Download</button>
+        </div>
+      </div>
+      <div id="canvas-holder">
+        <canvas id="game-of-life-canvas"></canvas>
+      </div>
+      <!--<div id="button-holder">
+        <span id="play-pause" class="control-button">⏪︎</span>
+        <span id="play-pause" class="control-button"><span class="button-icon button_play"></span></span>
+        <span id="play-pause" class="control-button">⏩︎</span>
+      </div>-->
+    </body>
+    <script src="wasm_hashlife_bg.js" type="module"></script>
+    <script src="index.js" type="module"></script>
+  </body>
+</html>
