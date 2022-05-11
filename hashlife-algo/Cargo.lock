@@ -7,6 +7,7 @@ name = "hashlife-fast"
 version = "0.1.0"
 dependencies = [
  "metrohash",
+ "typed-arena",
 ]
 
 [[package]]
@@ -14,3 +15,9 @@ name = "metrohash"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ba553cb19e2acbc54baa16faef215126243fe45e53357a3b2e9f4ebc7b0506c"
+
+[[package]]
+name = "typed-arena"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0685c84d5d54d1c26f7d3eb96cd41550adb97baed141a761cf335d3d33bcd0ae"

@@ -4,6 +4,7 @@ mod quadtree;
 mod largekey_table;
 mod raw_ops;
 mod serialize;
+mod typedarena;
 
 pub use crate::point::{Point};
 pub use crate::quadtree::{TreeData};

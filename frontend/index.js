@@ -183,7 +183,7 @@ function onWindowResize(event){
 function handleWebWorker(e){
     var workerData = e.data;
     console.log('Message received from worker');
-    console.log(workerData);
+    console.log(workerData.type);
     if (workerData.type === "ready"){
         //initialize web worker with default RLE
         myWorker.postMessage({

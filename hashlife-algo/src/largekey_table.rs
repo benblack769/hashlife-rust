@@ -7,21 +7,18 @@ is a hash.
 */
 
 use std::boxed::Box;
+use crate::typedarena::Arena;
 
-#[derive(Clone,Copy)]
-struct HashNodeData<T:Copy>{
+
+#[derive(Clone,Copy, Default)]
+struct HashNodeData<T:Copy + Default>{
     key: u128,
     value: T,
 }
-#[derive(Clone)]
-struct TableEntry<T:Copy>{
-    val: Option<Box<HashNodeData<T>>>,
-    upkey: u64,
-}
 
-#[derive(Clone)]
-pub struct LargeKeyTable<T: Copy>{
-    table: Vec<TableEntry<T>>,
+pub struct LargeKeyTable<T: Copy + Default>{
+    table: Vec<Option<std::ptr::NonNull<HashNodeData<T>>>>,
+    arena: Arena<HashNodeData<T>>,
     n_elements: usize,
     lookup_mask: usize, 
     pub table_size_log2: u8,
@@ -30,17 +27,38 @@ enum PossibleIdx {
     Found(usize),
     Empty(usize),
 }
-impl<T: Copy> LargeKeyTable<T>{
+
+fn get_idx<T:Copy + Default>(table: &Vec<Option<std::ptr::NonNull<HashNodeData<T>>>>, lookup_mask: usize, key: u128) -> PossibleIdx{
+    let upkey = (key >> 64) as u64;
+    let mut curkey = key >> 24;
+    //quadratic probing for now
+    let mut curoffset: usize = 0;
+    loop {
+        let idx = ((key as usize) + curoffset) & lookup_mask;
+        let entry = &table[idx];
+        match entry{
+            None=>{
+                return PossibleIdx::Empty(idx);
+            },
+            Some(ptr)=>{
+                let nodekey = unsafe{ptr.as_ref().key};
+                if (key == nodekey){
+                    return PossibleIdx::Found(idx);
+                }
+            }
+        }
+        curoffset += (curkey as usize) & 0xff;
+        curkey >>= 1;
+    }
+}
+impl<T: Copy + Default> LargeKeyTable<T>{
     pub fn new(initial_capacity_log2:u8) -> LargeKeyTable<T>{
         let next_size = 1 << initial_capacity_log2;
         // twos-compliment masking
         let next_mask = next_size - 1;
-        let init_data = TableEntry{
-            val: None,
-            upkey: 0,
-        };
         LargeKeyTable{
-            table: vec![init_data;next_size],
+            table: vec![None;next_size],
+            arena: Arena::new(),
             n_elements: 0,
             lookup_mask: next_mask,
             table_size_log2: initial_capacity_log2,
@@ -49,66 +67,42 @@ impl<T: Copy> LargeKeyTable<T>{
     pub fn len(&self)->usize{
         self.n_elements
     }
-    #[inline]
-    fn get_idx(&self, key: u128) -> PossibleIdx{
-        let upkey = (key >> 64) as u64;
-        let mut curkey = key >> 24;
-        //quadratic probing for now
-        let mut curoffset: usize = 0;
-        loop {
-            let idx = ((key as usize) + curoffset) & self.lookup_mask;
-            let entry = &self.table[idx];
-            if entry.val.is_none(){
-                return PossibleIdx::Empty(idx);
-            }
-            else if upkey == entry.upkey{
-                return PossibleIdx::Found(idx);
-            }
-            curoffset += (curkey as usize) & 0xff;
-            curkey >>= 1;
-        }
+    pub fn get_idx(&self, key:u128)->PossibleIdx{
+        get_idx(&self.table, self.lookup_mask, key)
     }
-    #[inline]
     pub fn get(&self, key: u128) -> Option<T>{
         match self.get_idx(key){
-            PossibleIdx::Found(idx)=>Some(self.table[idx].val.as_ref().unwrap().value),
-            PossibleIdx::Empty(_)=>None
-        }
-    }
-    #[inline]
-    pub fn get_mut(&mut self, key: u128) -> Option<&mut T>{
-        match self.get_idx(key){
-            PossibleIdx::Found(idx)=>Some(&mut self.table[idx].val.as_mut().unwrap().value),
+            PossibleIdx::Found(idx)=>Some(unsafe{self.table[idx].unwrap().as_ref().value}),
             PossibleIdx::Empty(_)=>None
         }
     }
     fn _grow(&mut self){
-        let mut new_table: LargeKeyTable<T> = LargeKeyTable::new(self.table_size_log2 + 1);
-        for entry in self.table.iter_mut(){
-            if entry.val.is_some(){
-                let val = entry.val.as_ref().unwrap();
-                new_table.add(val.key, val.value);
-                entry.val = None;
+        self.table_size_log2 += 1;
+        let next_size = 1<<self.table_size_log2;
+        self.table = vec![None;next_size];
+        self.lookup_mask = next_size - 1;
+        for entry in self.arena.iter_mut(){
+            match get_idx(&self.table, self.lookup_mask, entry.key){
+                PossibleIdx::Found(idx)=>{
+                    panic!("should not have found index when growing!");
+                },
+                PossibleIdx::Empty(idx)=>{
+                    self.table[idx] = std::ptr::NonNull::new(entry);
+                }
             }
         }
-        assert!(self.n_elements == new_table.n_elements);
-        *self = new_table;
     }
-    #[inline]
     pub fn add(&mut self, key: u128, value: T){
         match self.get_idx(key){
             PossibleIdx::Found(idx)=>{
-                self.table[idx].val.as_mut().unwrap().value = value;
+                unsafe{self.table[idx].unwrap().as_mut().value = value;};
             },
             PossibleIdx::Empty(idx)=>{
                 self.n_elements += 1;
-                self.table[idx] = TableEntry{
-                    val: Some(Box::new(HashNodeData{
-                        key: key,
-                        value: value,
-                    })),
-                    upkey: (key >> 64) as u64
-                };
+                self.table[idx] = std::ptr::NonNull::new(self.arena.alloc(HashNodeData{
+                    key: key,
+                    value: value,
+                }));
                 if self.n_elements >= self.table.len()/2{
                     self._grow();
                 }
@@ -127,16 +121,13 @@ impl<T: Copy> LargeKeyTable<T>{
     //     }
     // }
     
-    pub fn iter<F>(&self, func: &mut F)
+    pub fn iter<F>(& self, func: &mut F)
     where
         F: FnMut(&u128, &T)->bool
     {
-        for item in self.table.iter(){
-            if item.val.is_some(){
-                let val = item.val.as_ref().unwrap();
-                if !func(&val.key, &val.value) {
-                    break;
-                }
+        for item in self.arena.iter(){
+            if !func(&item.key, &item.value) {
+                break;
             }
         }
     }
