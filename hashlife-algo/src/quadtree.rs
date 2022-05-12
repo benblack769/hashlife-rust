@@ -244,7 +244,7 @@ impl TreeData{
     fn add_deps_to_tree(orig_table:&LargeKeyTable<QuadTreeNode>, new_table: &mut LargeKeyTable<QuadTreeNode>, root: u128){
         // if not raw value
         if !node_is_raw(root) && new_table.get(root).is_none(){
-            let node = orig_table.get(root).unwrap();
+            let mut node = orig_table.get(root).unwrap();
             for newroot in node.v.to_array().iter(){
                 TreeData::add_deps_to_tree(orig_table, new_table, *newroot);
             }
