@@ -7,8 +7,6 @@ edition = "2021"
 
 [dependencies]
 metrohash = "1.0.6"
-#static_assertions = "1.1.0"
-typed-arena = "2.0.1"
 
 [profile.release]
 opt-level = 3  # Optimize for size.
