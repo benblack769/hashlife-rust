@@ -99,10 +99,9 @@ const renderLoop = () => {
             amount: Math.pow(2,speedSelect.value),
         });
         last_step_time = cur_step_time;
-        setTimeout(renderLoop, desired_interval);
     }
     else{
-        // setTimeout(renderLoop, desired_interval - (cur_step_time - last_step_time));
+        setTimeout(renderLoop, desired_interval - (cur_step_time - last_step_time));
     }
 };
 
@@ -113,21 +112,14 @@ function bound_zoom(zoom_level){
 }
 function handle_wheel(event){
     // console.log(event);
-    if(event.ctrlKey){
-        // console.log("zoomed! ",event.deltaY,event);
-        var oldscale = zoomScale();
-        var cenx = xstart + event.offsetX*oldscale;
-        var ceny = ystart + event.offsetY*oldscale;
-        zoom_level -= event.deltaY*0.03;
-        zoom_level = bound_zoom(zoom_level)
-        var newscale = zoomScale();
-        xstart = cenx - event.offsetX*newscale;
-        ystart = ceny - event.offsetY*newscale;
-    }
-    else{
-        xstart += event.deltaX*zoomScale();
-        ystart += event.deltaY*zoomScale();
-    }
+    var oldscale = zoomScale();
+    var cenx = xstart + event.offsetX*oldscale;
+    var ceny = ystart + event.offsetY*oldscale;
+    zoom_level -= event.deltaY*0.03;
+    zoom_level = bound_zoom(zoom_level)
+    var newscale = zoomScale();
+    xstart = cenx - event.offsetX*newscale;
+    ystart = ceny - event.offsetY*newscale;
     render();
     event.stopPropagation();
 }
@@ -230,8 +222,8 @@ var is_mouse_down = false;
 var xcursor = 0;
 var ycursor = 0;
 function handle_mousedown(event){
-    console.log("start")
-    console.log(event)
+    // console.log("start")
+    // console.log(event)
     is_mouse_down = true;
     if(event.changedTouches){
         event = event.changedTouches[0];
@@ -248,7 +240,7 @@ function handle_mousemose(event){
         if(event.changedTouches){
             event = event.changedTouches[0];
         }
-        console.log(event)
+        // console.log(event)
         var deltax = (event.clientX - xcursor)
         var deltay = (event.clientY - ycursor)
         xstart -= deltax*zoomScale();
@@ -280,7 +272,7 @@ function fetch_data(url, callback){
 }
 function onSelectChange(event){
     const selected_url = examplesSelect.options[examplesSelect.selectedIndex].value;
-    console.log(selected_url)
+    console.log("loading: " + selected_url)
     fetch_data(selected_url, (result)=>{
         handleRleUpdate(result);
     })
