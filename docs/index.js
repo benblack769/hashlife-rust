@@ -21,8 +21,6 @@ var cellCountDisplay = document.getElementById("cell-count");
 var hashCountDisplay = document.getElementById("cached-hash-count");
 var staticHashCountDisplay = document.getElementById("static-hash-count");
 var ageDisplay = document.getElementById("universe-age");
-var speedSelect = document.getElementById("speed-select");
-var fpsSelect = document.getElementById("fps-select");
 var garbageSelect = document.getElementById("garbage-select");
 var filedata = RLE_STR;
 var xyfilecoord = [12,8];
@@ -30,16 +28,34 @@ var inputFileLoader = document.getElementById("rle-file-input");
 var resetBoundingButton = document.getElementById("reset-bounding-box")
 var downloadButton = document.getElementById("download-rle")
 var examplesSelect = document.getElementById("examples-select")
+var play_pause = document.getElementById("play-pause")
 var zoom_level = -1;
 const myWorker = new Worker("worker.js", {type: "module"});
 var last_step_time = 0;
 var needs_render = true;
+var current_speed = 1;
+var current_fps = 4;
+var is_paused = false;
 
 
 const play = "⏵︎";
 const pause = "⏸︎";
-var play_pause = document.getElementById("play-pause")
-
+document.getElementById("decrease-speed").onclick = function(){
+    current_speed = Math.max(current_speed - 1, 1);
+    render();
+}
+document.getElementById("increase-speed").onclick = function(){
+    current_speed = current_speed + 1;
+    render();
+}
+document.getElementById("fast-backwards").onclick = function(){
+    current_fps = Math.max(0, current_fps - 1);
+    render();
+}
+document.getElementById("fast-forwards").onclick = function(){
+    current_fps = Math.min(12, current_fps + 1);
+    render();
+}
 function cellSize(){
     return Math.pow(2, Math.floor((zoom_level < 0 ? -zoom_level : 0)))//cellSizeSelect.value)
 }
@@ -91,18 +107,17 @@ function clearCanvas(){
     ctx.fillRect(0,0,canvas.width,canvas.height);
 }
 const renderLoop = () => {
-    const desired_interval = 1000/Math.pow(2,fpsSelect.value/2.);
+    const desired_interval = 1000/Math.pow(2,current_fps/2.);
     const cur_step_time = new Date().getTime();
-    if (cur_step_time - last_step_time > desired_interval-5){
+    if (!is_paused && cur_step_time - last_step_time > desired_interval-5){
         myWorker.postMessage({
             type: "step_forward",
-            amount: Math.pow(2,speedSelect.value),
+            amount: Math.pow(2,current_speed),
         });
         last_step_time = cur_step_time;
-        setTimeout(renderLoop, desired_interval);
     }
     else{
-        // setTimeout(renderLoop, desired_interval - (cur_step_time - last_step_time));
+        setTimeout(renderLoop, desired_interval - (cur_step_time - last_step_time));
     }
 };
 
@@ -113,21 +128,14 @@ function bound_zoom(zoom_level){
 }
 function handle_wheel(event){
     // console.log(event);
-    if(event.ctrlKey){
-        // console.log("zoomed! ",event.deltaY,event);
-        var oldscale = zoomScale();
-        var cenx = xstart + event.offsetX*oldscale;
-        var ceny = ystart + event.offsetY*oldscale;
-        zoom_level -= event.deltaY*0.03;
-        zoom_level = bound_zoom(zoom_level)
-        var newscale = zoomScale();
-        xstart = cenx - event.offsetX*newscale;
-        ystart = ceny - event.offsetY*newscale;
-    }
-    else{
-        xstart += event.deltaX*zoomScale();
-        ystart += event.deltaY*zoomScale();
-    }
+    var oldscale = zoomScale();
+    var cenx = xstart + event.offsetX*oldscale;
+    var ceny = ystart + event.offsetY*oldscale;
+    zoom_level -= event.deltaY*0.03;
+    zoom_level = bound_zoom(zoom_level)
+    var newscale = zoomScale();
+    xstart = cenx - event.offsetX*newscale;
+    ystart = ceny - event.offsetY*newscale;
     render();
     event.stopPropagation();
 }
@@ -230,8 +238,8 @@ var is_mouse_down = false;
 var xcursor = 0;
 var ycursor = 0;
 function handle_mousedown(event){
-    console.log("start")
-    console.log(event)
+    // console.log("start")
+    // console.log(event)
     is_mouse_down = true;
     if(event.changedTouches){
         event = event.changedTouches[0];
@@ -248,7 +256,7 @@ function handle_mousemose(event){
         if(event.changedTouches){
             event = event.changedTouches[0];
         }
-        console.log(event)
+        // console.log(event)
         var deltax = (event.clientX - xcursor)
         var deltay = (event.clientY - ycursor)
         xstart -= deltax*zoomScale();
@@ -280,11 +288,23 @@ function fetch_data(url, callback){
 }
 function onSelectChange(event){
     const selected_url = examplesSelect.options[examplesSelect.selectedIndex].value;
-    console.log(selected_url)
+    console.log("loading: " + selected_url)
     fetch_data(selected_url, (result)=>{
         handleRleUpdate(result);
     })
 }
+function handlePlayPause(event){
+    if (play_pause.innerText == play){
+        play_pause.innerText = pause;
+        is_paused = false;
+    }
+    else{
+        play_pause.innerText = play;
+        is_paused = true;
+    }
+}
+play_pause.onclick = handlePlayPause;
+
 examplesSelect.addEventListener('change',onSelectChange);
 brightnessSelect.addEventListener('change',render);
 resetBoundingButton.addEventListener("click", resetBoundingBox, false);

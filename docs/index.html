@@ -11,10 +11,10 @@
       body {
         overscroll-behavior-x: none;
         overscroll-behavior-y: none;
+        font-family: "Segoe UI Symbol";
       }
       #game-of-life-canvas {
       }
-      
       #canvas-holder{
         position: absolute;
         top: 0;
@@ -34,59 +34,41 @@
       }
       #button-holder{
         position: absolute;
-        bottom: 0;
+        width: 20em;
+        margin-left: -10em;
         left: 50%;
+        bottom: 0;
         z-index: 1;
+        border-radius:200%;
+        background-color: gray;
+        display: flex;
+        justify-content: center;
+        
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Edge, Opera and Firefox */
       }
       .control-button{
-        width:100px;
-        height: 100px;
-        border-radius:100%;
-        background-color: gray;
-        align-items:center;
-        justify-content:center;
         font-size:2.3em;
-        display: inline-block;
-      }
-      
-      .button-icon{
-        /*taken from https://css-tricks.com/making-pure-css-playpause-button */
-        box-sizing: border-box;
-        height: 48px;
         
-        border-color: transparent transparent transparent #202020;
-        transition: 100ms all ease;
-        will-change: border-width;
+      }
+      .control-button:hover{
+        color: white;
         cursor: pointer;
-
       }
       
-      .button_pause {
-          border-style: double;
-          border-width: 0px 0 0px 60px;
-        }
-        .button_play {
-        border-style: solid;
-        border-width: 24px 0 24px 40px;
-        }
-      .control-button:hover{
-        background-color: white;
-        cursor: pointer	;
-      }
     </style>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
   </head>
   <body>
     <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
     <body>
       <div id="gol-options">
-        <div>
-          <span>Speed</span>
-          <input id="speed-select" type="range" min="0" max="20" value="1" class="slider">
-        </div>
-        <div>
-          <span>FPS</span>
-          <input id="fps-select" type="range" min="-4" max="12" value="4" class="slider">
-        </div>
         <div>
           <span>Garbage collection</span>
           <input id="garbage-select" type="range" min="18" max="30" value="22" class="slider">
@@ -121,7 +103,7 @@
         <div>
           <button id="download-rle">Download</button>
         </div>
-        <div>
+        <div>          
           Select builtin pattern
           <select name="examples" id="examples-select">
             <option value="examples/109-still-lifes.rle">109-still-lifes.rle</option>
@@ -178,6 +160,7 @@
             <option value="examples/fermat-primes.rle">fermat-primes.rle</option>
             <option value="examples/forward-LWSS-rake-p90.rle">forward-LWSS-rake-p90.rle</option>
             <option value="examples/glider-stream-crystal.rle">glider-stream-crystal.rle</option>
+            <option value="http://www.rendell-attic.org/gol/fullutm/patterns/fullutm.rle">fullutm.rle</option>
             <option value="examples/golly-ticker.rle">golly-ticker.rle</option>
             <option value="examples/gun-p165mwss.rle">gun-p165mwss.rle</option>
             <option value="examples/hashlife-oddity1.rle">hashlife-oddity1.rle</option>
@@ -287,16 +270,19 @@
             <option value="examples/wicks-DRH-2002.rle">wicks-DRH-2002.rle</option>
             <option value="examples/zigzag-wickstretcher.rle">zigzag-wickstretcher.rle</option>
         </select>
+
        </div>
       </div>
       <div id="canvas-holder">
         <canvas id="game-of-life-canvas"></canvas>
       </div>
-      <!--<div id="button-holder">
-        <span id="play-pause" class="control-button">⏪︎</span>
-        <span id="play-pause" class="control-button"><span class="button-icon button_play"></span></span>
-        <span id="play-pause" class="control-button">⏩︎</span>
-      </div>-->
+      <div id="button-holder">
+        <span id="decrease-speed" class="control-button">⏷︎</span>
+        <span id="fast-backwards" class="control-button">⏪︎</span>
+        <span id="play-pause" class="control-button">⏸︎</span>
+        <span id="fast-forwards" class="control-button">⏩︎</span>
+        <span id="increase-speed" class="control-button">⏶︎</span>
+      </div>
     </body>
     <script src="wasm_hashlife_bg.js" type="module"></script>
     <script src="index.js" type="module"></script>
