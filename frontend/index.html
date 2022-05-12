@@ -4,8 +4,17 @@
     <meta charset="utf-8">
     <title>Hello wasm-pack!</title>
     <style>
+      html {
+        overscroll-behavior-x: none;
+        overscroll-behavior-y: none;
+      }
+      body {
+        overscroll-behavior-x: none;
+        overscroll-behavior-y: none;
+      }
       #game-of-life-canvas {
       }
+      
       #canvas-holder{
         position: absolute;
         top: 0;
@@ -114,19 +123,20 @@
         </div>
         <div>
           Select builtin pattern
-          <select name="examples" id="examples-select"><option value="examples\52513m.rle">52513m.rle</option>
-            <option value="examples\ark1.rle">ark1.rle</option>
-            <option value="examples\ark2.rle">ark2.rle</option>
-            <option value="examples\blom.rle">blom.rle</option>
-            <option value="examples\iwona.rle">iwona.rle</option>
-            <option value="examples\justyna.rle">justyna.rle</option>
-            <option value="examples\lidka-predecessor.rle">lidka-predecessor.rle</option>
-            <option value="examples\natural-LWSS.rle">natural-LWSS.rle</option>
-            <option value="examples\rabbits-relation-17423.rle">rabbits-relation-17423.rle</option>
-            <option value="examples\rabbits-relation-17465.rle">rabbits-relation-17465.rle</option>
-            <option value="examples\temp-pulsars-big-s.rle">temp-pulsars-big-s.rle</option>
+          <select name="examples" id="examples-select">
+            <option value="examples/52513m.rle">52513m.rle</option>
+            <option value="examples/ark1.rle">ark1.rle</option>
+            <option value="examples/ark2.rle">ark2.rle</option>
+            <option value="examples/blom.rle">blom.rle</option>
+            <option value="examples/iwona.rle">iwona.rle</option>
+            <option value="examples/justyna.rle">justyna.rle</option>
+            <option value="examples/lidka-predecessor.rle">lidka-predecessor.rle</option>
+            <option value="examples/natural-LWSS.rle">natural-LWSS.rle</option>
+            <option value="examples/rabbits-relation-17423.rle">rabbits-relation-17423.rle</option>
+            <option value="examples/rabbits-relation-17465.rle">rabbits-relation-17465.rle</option>
+            <option value="examples/temp-pulsars-big-s.rle">temp-pulsars-big-s.rle</option>
         </select>
-        </div>
+       </div>
       </div>
       <div id="canvas-holder">
         <canvas id="game-of-life-canvas"></canvas>

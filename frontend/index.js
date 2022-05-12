@@ -29,7 +29,7 @@ var xyfilecoord = [12,8];
 var inputFileLoader = document.getElementById("rle-file-input");
 var resetBoundingButton = document.getElementById("reset-bounding-box")
 var downloadButton = document.getElementById("download-rle")
-var downloadButton = document.getElementById("download-rle")
+var examplesSelect = document.getElementById("examples-select")
 var zoom_level = -1;
 const myWorker = new Worker("worker.js", {type: "module"});
 var last_step_time = 0;
@@ -131,26 +131,28 @@ function handle_wheel(event){
     render();
     event.stopPropagation();
 }
+function handleRleUpdate(filedata){
+    myWorker.postMessage({
+        type: "set_rle",
+        data: filedata,
+    });
+    //make sure to keep a local copy at all times
+    tree.free()
+    tree = TreeDataWrapper.make_from_rle(filedata);
+    parseBoundingBox(filedata)
+    resetBoundingBox()
+}
 function handleFileUpload() {
     clearCanvas();
     var file = inputFileLoader.files[0];
     filename = file.name;
     const reader = new FileReader();
     reader.onload = function(){
-        filedata = reader.result;
-        myWorker.postMessage({
-            type: "set_rle",
-            data: filedata,
-        });
-        //make sure to keep a local copy at all times
-        tree.free()
-        tree = TreeDataWrapper.make_from_rle(filedata);
-        parseBoundingBox()
-        resetBoundingBox()
+        handleRleUpdate(reader.result);
     }
     reader.readAsText(file);
 }
-function parseBoundingBox(){
+function parseBoundingBox(filedata){
     var boundsline = filedata.split('\n').filter((l)=>l[0] != "#")[0]
     const numregex = /\d+/g;
     xyfilecoord = boundsline.match(numregex);
@@ -236,10 +238,9 @@ function handle_mousedown(event){
     }
     xcursor = event.clientX;
     ycursor = event.clientY;
+    event.stopPropagation();
 }
 function handle_mouseup(event){
-    console.log("end")
-    console.log(event)
     is_mouse_down = false;
 }
 function handle_mousemose(event){
@@ -255,8 +256,36 @@ function handle_mousemose(event){
         xcursor += deltax;
         ycursor += deltay;
         render();
+        event.stopPropagation();
     }
 }
+function fetch_data(url, callback){
+    // 1. Create a new XMLHttpRequest object
+    let xhr = new XMLHttpRequest();
+
+    // 2. Configure it: GET-request for the URL /article/.../load
+    xhr.open('GET', url);
+
+    // 3. Send the request over the network
+    xhr.send();
+
+    // 4. This will be called after the response is received
+    xhr.onload = function() {
+    if (xhr.status != 200) { // analyze HTTP status of the response
+        alert(`Error ${xhr.status}: ${xhr.statusText}`); // e.g. 404: Not Found
+    } else { // show the result
+        callback(xhr.response)
+    }
+    };
+}
+function onSelectChange(event){
+    const selected_url = examplesSelect.options[examplesSelect.selectedIndex].value;
+    console.log(selected_url)
+    fetch_data(selected_url, (result)=>{
+        handleRleUpdate(result);
+    })
+}
+examplesSelect.addEventListener('change',onSelectChange);
 brightnessSelect.addEventListener('change',render);
 resetBoundingButton.addEventListener("click", resetBoundingBox, false);
 downloadButton.addEventListener("click", downloadRLE, false);
@@ -264,7 +293,7 @@ garbageSelect.addEventListener('change', handleGarbageSelect);
 inputFileLoader.addEventListener("change", handleFileUpload, false);
 canvas.addEventListener("wheel", handle_wheel, false);
 window.addEventListener('resize', onWindowResize);
-window.addEventListener('mousemove', handle_mousemose);
+canvas.addEventListener('mousemove', handle_mousemose);
 window.addEventListener('mouseup', handle_mouseup);
 window.addEventListener('mousedown', handle_mousedown);
 window.addEventListener('touchmove', handle_mousemose);

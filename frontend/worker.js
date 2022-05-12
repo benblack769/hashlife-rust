@@ -21,12 +21,12 @@ async function run() {
         else if (workerData.type == "step_forward"){
             tree.step_forward(workerData.amount)
             if (tree.hash_count() > 0.9*hashsize_limit){
-                // console.log("worker collectgin garbage")
-                // console.log("prev size", tree.hash_count())
+                console.log("worker collectgin garbage")
+                console.log("prev size", tree.hash_count())
                 const newtree = tree.pruned_tree();
                 tree.free();
                 tree = newtree;
-                // console.log("fin size", tree.hash_count())
+                console.log("fin size", tree.hash_count())
             }
             var pruned_tree = tree.pruned_tree();
             var serialized = pruned_tree.serialize_treerepr();

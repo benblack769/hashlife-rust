@@ -17,5 +17,5 @@ for subpath in Path("examples").iterdir():
     # shutil.copy(subpath, Path("build") / os.path.basename(subpath))
 
 options_str = "\n    ".join(options)
-select = f'<select name="examples" id="examples-select">{options_str}\n</select>\n'
+select = f'<select name="examples" id="examples-select">\n    {options_str}\n</select>\n'
 print(select)
