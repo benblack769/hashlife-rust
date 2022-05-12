@@ -12,8 +12,8 @@ const RLE_STR = (
 var tree = TreeDataWrapper.make_from_rle(RLE_STR);
 var workerhashcount = 0;
 var canvas = document.getElementById("game-of-life-canvas");
-var xsize = window.innerWidth- 10;
-var ysize = window.innerHeight- 10;
+var xsize = window.innerWidth;
+var ysize = window.innerHeight;
 var xstart = 0;
 var ystart = 0;
 var brightnessSelect = document.getElementById("brightness-select");
@@ -53,7 +53,7 @@ function brightness(){
     return Math.pow(2,0.25*brightnessSelect.value)
 }
 function roundToCell(size){
-    return Math.floor(size/cellSize())*cellSize()
+    return Math.ceil(size/cellSize())*cellSize()
 }
 function actualRender(){
     requestAnimationFrame(actualRender);
@@ -61,10 +61,10 @@ function actualRender(){
         return false;
     }
     needs_render = false;
-    console.log("rendered!")
+    // console.log("rendered!")
     // console.log(tree.hash_count());
     // console.log(tree.num_live_cells());
-    var map = tree.make_grayscale_map(xstart,ystart,xsize/cellSize(), ysize/cellSize(),cellSize(),zoomLevel(),brightness());
+    var map = tree.make_grayscale_map(xstart,ystart,Math.ceil(xsize/cellSize()), Math.ceil(ysize/cellSize()),cellSize(),zoomLevel(),brightness());
     // console.log(map);
     var clamped_data = new Uint8ClampedArray(map);
     // console.log(clamped_data);
@@ -114,7 +114,7 @@ function bound_zoom(zoom_level){
 function handle_wheel(event){
     // console.log(event);
     if(event.ctrlKey){
-        console.log("zoomed! ",event.deltaY,event);
+        // console.log("zoomed! ",event.deltaY,event);
         var oldscale = zoomScale();
         var cenx = xstart + event.offsetX*oldscale;
         var ceny = ystart + event.offsetY*oldscale;
@@ -158,14 +158,14 @@ function parseBoundingBox(){
 function resetBoundingBox(){
     var filex = xyfilecoord[0];
     var filey = xyfilecoord[1];
-    console.log(filex);
-    console.log(filey);
+    // console.log(filex);
+    // console.log(filey);
     xstart = -filex/4;
     ystart = -filey/4;
     var zoomx = Math.log2(filex*2 / canvas.width);
     var zoomy = Math.log2(filey*2 / canvas.height);
-    console.log(zoomx);
-    console.log(zoomy);
+    // console.log(zoomx);
+    // console.log(zoomy);
     zoom_level = bound_zoom(Math.max(zoomx,zoomy));
     var scale = zoomScale();
     let xcen = scale*canvas.width/2;
@@ -190,15 +190,15 @@ function downloadRLE(){
     downloadText(tree.get_rle(),filename+"."+tree.get_age());
 }
 function onWindowResize(event){
-    xsize = window.innerWidth- 10;
-    ysize = window.innerHeight- 10;
+    xsize = window.innerWidth;
+    ysize = window.innerHeight;
     canvas.width = xsize;
     canvas.height = ysize;
 }
 function handleWebWorker(e){
     var workerData = e.data;
-    console.log('Message received from worker');
-    console.log(workerData.type);
+    // console.log('Message received from worker');
+    // console.log(workerData.type);
     if (workerData.type === "ready"){
         //initialize web worker with default RLE
         myWorker.postMessage({
@@ -224,7 +224,39 @@ function handleGarbageSelect(e){
         amount: Math.pow(2,garbageSelect.value),
     })
 }
-
+var is_mouse_down = false;
+var xcursor = 0;
+var ycursor = 0;
+function handle_mousedown(event){
+    console.log("start")
+    console.log(event)
+    is_mouse_down = true;
+    if(event.changedTouches){
+        event = event.changedTouches[0];
+    }
+    xcursor = event.clientX;
+    ycursor = event.clientY;
+}
+function handle_mouseup(event){
+    console.log("end")
+    console.log(event)
+    is_mouse_down = false;
+}
+function handle_mousemose(event){
+    if (is_mouse_down){
+        if(event.changedTouches){
+            event = event.changedTouches[0];
+        }
+        console.log(event)
+        var deltax = (event.clientX - xcursor)
+        var deltay = (event.clientY - ycursor)
+        xstart -= deltax*zoomScale();
+        ystart -= deltay*zoomScale();
+        xcursor += deltax;
+        ycursor += deltay;
+        render();
+    }
+}
 brightnessSelect.addEventListener('change',render);
 resetBoundingButton.addEventListener("click", resetBoundingBox, false);
 downloadButton.addEventListener("click", downloadRLE, false);
@@ -232,6 +264,12 @@ garbageSelect.addEventListener('change', handleGarbageSelect);
 inputFileLoader.addEventListener("change", handleFileUpload, false);
 canvas.addEventListener("wheel", handle_wheel, false);
 window.addEventListener('resize', onWindowResize);
+window.addEventListener('mousemove', handle_mousemose);
+window.addEventListener('mouseup', handle_mouseup);
+window.addEventListener('mousedown', handle_mousedown);
+window.addEventListener('touchmove', handle_mousemose);
+window.addEventListener('touchend', handle_mouseup);
+window.addEventListener('touchstart', handle_mousedown);
 
 myWorker.onmessage = handleWebWorker
 

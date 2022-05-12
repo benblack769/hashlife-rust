@@ -13,6 +13,7 @@
         width: 100%;
         height: 100%;
         background-color: black;
+        overflow: hidden;
       }
       #gol-options{
         position: absolute;
@@ -79,7 +80,7 @@
         </div>
         <div>
           <span>Garbage collection</span>
-          <input id="garbage-select" type="range" min="18" max="30" value="24" class="slider">
+          <input id="garbage-select" type="range" min="18" max="30" value="22" class="slider">
         </div>
         <div>
           <span>Brighness</span>
@@ -110,6 +111,21 @@
         </div>
         <div>
           <button id="download-rle">Download</button>
+        </div>
+        <div>
+          Select builtin pattern
+          <select name="examples" id="examples-select"><option value="examples\52513m.rle">52513m.rle</option>
+            <option value="examples\ark1.rle">ark1.rle</option>
+            <option value="examples\ark2.rle">ark2.rle</option>
+            <option value="examples\blom.rle">blom.rle</option>
+            <option value="examples\iwona.rle">iwona.rle</option>
+            <option value="examples\justyna.rle">justyna.rle</option>
+            <option value="examples\lidka-predecessor.rle">lidka-predecessor.rle</option>
+            <option value="examples\natural-LWSS.rle">natural-LWSS.rle</option>
+            <option value="examples\rabbits-relation-17423.rle">rabbits-relation-17423.rle</option>
+            <option value="examples\rabbits-relation-17465.rle">rabbits-relation-17465.rle</option>
+            <option value="examples\temp-pulsars-big-s.rle">temp-pulsars-big-s.rle</option>
+        </select>
         </div>
       </div>
       <div id="canvas-holder">
