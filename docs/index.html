@@ -4,8 +4,17 @@
     <meta charset="utf-8">
     <title>Hello wasm-pack!</title>
     <style>
+      html {
+        overscroll-behavior-x: none;
+        overscroll-behavior-y: none;
+      }
+      body {
+        overscroll-behavior-x: none;
+        overscroll-behavior-y: none;
+      }
       #game-of-life-canvas {
       }
+      
       #canvas-holder{
         position: absolute;
         top: 0;
@@ -114,19 +123,171 @@
         </div>
         <div>
           Select builtin pattern
-          <select name="examples" id="examples-select"><option value="examples\52513m.rle">52513m.rle</option>
-            <option value="examples\ark1.rle">ark1.rle</option>
-            <option value="examples\ark2.rle">ark2.rle</option>
-            <option value="examples\blom.rle">blom.rle</option>
-            <option value="examples\iwona.rle">iwona.rle</option>
-            <option value="examples\justyna.rle">justyna.rle</option>
-            <option value="examples\lidka-predecessor.rle">lidka-predecessor.rle</option>
-            <option value="examples\natural-LWSS.rle">natural-LWSS.rle</option>
-            <option value="examples\rabbits-relation-17423.rle">rabbits-relation-17423.rle</option>
-            <option value="examples\rabbits-relation-17465.rle">rabbits-relation-17465.rle</option>
-            <option value="examples\temp-pulsars-big-s.rle">temp-pulsars-big-s.rle</option>
+          <select name="examples" id="examples-select">
+            <option value="examples/109-still-lifes.rle">109-still-lifes.rle</option>
+            <option value="examples/1998-eater-stamp-collection.rle">1998-eater-stamp-collection.rle</option>
+            <option value="examples/29-still-lifes.rle">29-still-lifes.rle</option>
+            <option value="examples/2c5-engineless-rake-p185.rle">2c5-engineless-rake-p185.rle</option>
+            <option value="examples/2c5-orthogonal.rle">2c5-orthogonal.rle</option>
+            <option value="examples/2c5-spaceship-gun-p416.rle">2c5-spaceship-gun-p416.rle</option>
+            <option value="examples/2c5-spaceship-gun-p690.rle">2c5-spaceship-gun-p690.rle</option>
+            <option value="examples/2c5-spaceship-rake-p240.rle">2c5-spaceship-rake-p240.rle</option>
+            <option value="examples/52513m.rle">52513m.rle</option>
+            <option value="examples/7-in-a-row-Cordership-V-gun.rle">7-in-a-row-Cordership-V-gun.rle</option>
+            <option value="examples/adjustable-Corder-lineship.rle">adjustable-Corder-lineship.rle</option>
+            <option value="examples/advancer.rle">advancer.rle</option>
+            <option value="examples/agar-p3.rle">agar-p3.rle</option>
+            <option value="examples/ark1.rle">ark1.rle</option>
+            <option value="examples/ark2.rle">ark2.rle</option>
+            <option value="examples/basic-rakes.rle">basic-rakes.rle</option>
+            <option value="examples/billiard-table.rle">billiard-table.rle</option>
+            <option value="examples/blockish-and-blockic-seeds.rle">blockish-and-blockic-seeds.rle</option>
+            <option value="examples/blockstacker.rle">blockstacker.rle</option>
+            <option value="examples/blom.rle">blom.rle</option>
+            <option value="examples/broken-lines.rle">broken-lines.rle</option>
+            <option value="examples/c2-Cordership-rake.rle">c2-Cordership-rake.rle</option>
+            <option value="examples/c3-forward-rake-p159.rle">c3-forward-rake-p159.rle</option>
+            <option value="examples/c3-orthogonal.rle">c3-orthogonal.rle</option>
+            <option value="examples/c4-diag-switch-engines.rle">c4-diag-switch-engines.rle</option>
+            <option value="examples/c4-diagonal-puffer.rle">c4-diagonal-puffer.rle</option>
+            <option value="examples/c4-diagonal.rle">c4-diagonal.rle</option>
+            <option value="examples/c4-orthogonal.rle">c4-orthogonal.rle</option>
+            <option value="examples/c4-sideways-rake.rle">c4-sideways-rake.rle</option>
+            <option value="examples/c5-adjustable-rake.rle">c5-adjustable-rake.rle</option>
+            <option value="examples/cambrian-explosion.rle">cambrian-explosion.rle</option>
+            <option value="examples/catacryst.rle">catacryst.rle</option>
+            <option value="examples/chase-the-glider.rle">chase-the-glider.rle</option>
+            <option value="examples/conga-line-switch-engine-extender.rle">conga-line-switch-engine-extender.rle</option>
+            <option value="examples/constructor-memory-loop.rle">constructor-memory-loop.rle</option>
+            <option value="examples/constructor-memory-tape.rle">constructor-memory-tape.rle</option>
+            <option value="examples/Corder-lineship.rle">Corder-lineship.rle</option>
+            <option value="examples/Cordership-boat-burner.rle">Cordership-boat-burner.rle</option>
+            <option value="examples/Cordership-gun-p784.rle">Cordership-gun-p784.rle</option>
+            <option value="examples/Cordership-LWSS-freeze-tag.rle">Cordership-LWSS-freeze-tag.rle</option>
+            <option value="examples/corderships.rle">corderships.rle</option>
+            <option value="examples/cross-surface.rle">cross-surface.rle</option>
+            <option value="examples/crystallizing-dirty-superstring.rle">crystallizing-dirty-superstring.rle</option>
+            <option value="examples/demonoid-c512-hashlife-friendly.mc.rle">demonoid-c512-hashlife-friendly.mc.rle</option>
+            <option value="examples/diagfuse1.rle">diagfuse1.rle</option>
+            <option value="examples/diagonal.rle">diagonal.rle</option>
+            <option value="examples/die658.rle">die658.rle</option>
+            <option value="examples/eaters-misc.rle">eaters-misc.rle</option>
+            <option value="examples/eaters.rle">eaters.rle</option>
+            <option value="examples/elbow-ladders.rle">elbow-ladders.rle</option>
+            <option value="examples/extensible-low-period.rle">extensible-low-period.rle</option>
+            <option value="examples/fermat-primes.rle">fermat-primes.rle</option>
+            <option value="examples/forward-LWSS-rake-p90.rle">forward-LWSS-rake-p90.rle</option>
+            <option value="examples/glider-stream-crystal.rle">glider-stream-crystal.rle</option>
+            <option value="examples/golly-ticker.rle">golly-ticker.rle</option>
+            <option value="examples/gun-p165mwss.rle">gun-p165mwss.rle</option>
+            <option value="examples/hashlife-oddity1.rle">hashlife-oddity1.rle</option>
+            <option value="examples/hashlife-oddity2.rle">hashlife-oddity2.rle</option>
+            <option value="examples/heisenblinker-30.rle">heisenblinker-30.rle</option>
+            <option value="examples/heisenburp-30.rle">heisenburp-30.rle</option>
+            <option value="examples/heisenburp-46-natural.rle">heisenburp-46-natural.rle</option>
+            <option value="examples/heisenburp-46.rle">heisenburp-46.rle</option>
+            <option value="examples/herringbone-agar-p14.rle">herringbone-agar-p14.rle</option>
+            <option value="examples/hexadecimal.mc.rle">hexadecimal.mc.rle</option>
+            <option value="examples/honey-farm-hasslers.rle">honey-farm-hasslers.rle</option>
+            <option value="examples/infinity-hotel0.rle">infinity-hotel0.rle</option>
+            <option value="examples/infinity-hotel1.rle">infinity-hotel1.rle</option>
+            <option value="examples/infinity-hotel2.rle">infinity-hotel2.rle</option>
+            <option value="examples/infinity-hotel3.rle">infinity-hotel3.rle</option>
+            <option value="examples/iwona.rle">iwona.rle</option>
+            <option value="examples/jagged.rle">jagged.rle</option>
+            <option value="examples/justyna.rle">justyna.rle</option>
+            <option value="examples/Klein-bottle.rle">Klein-bottle.rle</option>
+            <option value="examples/lidka-predecessor.rle">lidka-predecessor.rle</option>
+            <option value="examples/life-integer-constructions.rle">life-integer-constructions.rle</option>
+            <option value="examples/lightspeed-bubble.rle">lightspeed-bubble.rle</option>
+            <option value="examples/lightspeed.rle">lightspeed.rle</option>
+            <option value="examples/line-puffer-superstable.rle">line-puffer-superstable.rle</option>
+            <option value="examples/line-puffer-unstable.rle">line-puffer-unstable.rle</option>
+            <option value="examples/linear-propagator-p237228340.mc.rle">linear-propagator-p237228340.mc.rle</option>
+            <option value="examples/loafer-gun-p210.rle">loafer-gun-p210.rle</option>
+            <option value="examples/loafer-gun-p8388608-linear.mc.rle">loafer-gun-p8388608-linear.mc.rle</option>
+            <option value="examples/loggrow-corder.rle">loggrow-corder.rle</option>
+            <option value="examples/low-period.rle">low-period.rle</option>
+            <option value="examples/LWSS-breeder.rle">LWSS-breeder.rle</option>
+            <option value="examples/make-harbor.rle">make-harbor.rle</option>
+            <option value="examples/make-osc-p3.rle">make-osc-p3.rle</option>
+            <option value="examples/make-osc-p4.rle">make-osc-p4.rle</option>
+            <option value="examples/make-osc-p5-plus.rle">make-osc-p5-plus.rle</option>
+            <option value="examples/make-p11.rle">make-p11.rle</option>
+            <option value="examples/make-p18.rle">make-p18.rle</option>
+            <option value="examples/make-p33.rle">make-p33.rle</option>
+            <option value="examples/metapixel-galaxy.mc.rle">metapixel-galaxy.mc.rle</option>
+            <option value="examples/natural-LWSS.rle">natural-LWSS.rle</option>
+            <option value="examples/nick-gotts-1.rle">nick-gotts-1.rle</option>
+            <option value="examples/nick-gotts-2.rle">nick-gotts-2.rle</option>
+            <option value="examples/one-cell-thick-quadratic-growth-2596x1.rle">one-cell-thick-quadratic-growth-2596x1.rle</option>
+            <option value="examples/ordovician-radiation.rle">ordovician-radiation.rle</option>
+            <option value="examples/orthogonal.rle">orthogonal.rle</option>
+            <option value="examples/oscillator-stamp-collection-24Nov2021.rle">oscillator-stamp-collection-24Nov2021.rle</option>
+            <option value="examples/oscillator-syntheses.rle">oscillator-syntheses.rle</option>
+            <option value="examples/p100-H-channel-breeder.rle">p100-H-channel-breeder.rle</option>
+            <option value="examples/p100-H-track-puffer.rle">p100-H-track-puffer.rle</option>
+            <option value="examples/p103079214841.rle">p103079214841.rle</option>
+            <option value="examples/p138.rle">p138.rle</option>
+            <option value="examples/p270-frothing-puffer-rake.rle">p270-frothing-puffer-rake.rle</option>
+            <option value="examples/p30-racetrack.rle">p30-racetrack.rle</option>
+            <option value="examples/p46racetrack.rle">p46racetrack.rle</option>
+            <option value="examples/p59-gun-with-Snark-reflectors.rle">p59-gun-with-Snark-reflectors.rle</option>
+            <option value="examples/p690-PT-Cordership-gun.rle">p690-PT-Cordership-gun.rle</option>
+            <option value="examples/p90-rake-factory.rle">p90-rake-factory.rle</option>
+            <option value="examples/period-52-glider-gun.rle">period-52-glider-gun.rle</option>
+            <option value="examples/phase-shift.rle">phase-shift.rle</option>
+            <option value="examples/pi-blink-breeder1.rle">pi-blink-breeder1.rle</option>
+            <option value="examples/pi-blink-breeder2.rle">pi-blink-breeder2.rle</option>
+            <option value="examples/pi-fuse-puffer.rle">pi-fuse-puffer.rle</option>
+            <option value="examples/pseudo-p34-gun.rle">pseudo-p34-gun.rle</option>
+            <option value="examples/puffer-2c5.rle">puffer-2c5.rle</option>
+            <option value="examples/puffer-train.rle">puffer-train.rle</option>
+            <option value="examples/pulsars-in-tube.rle">pulsars-in-tube.rle</option>
+            <option value="examples/puzzle.rle">puzzle.rle</option>
+            <option value="examples/queen-bee-turn.rle">queen-bee-turn.rle</option>
+            <option value="examples/rabbits-relation-17423.rle">rabbits-relation-17423.rle</option>
+            <option value="examples/rabbits-relation-17465.rle">rabbits-relation-17465.rle</option>
+            <option value="examples/rake-breeder.rle">rake-breeder.rle</option>
+            <option value="examples/random.rle">random.rle</option>
+            <option value="examples/reflectors.rle">reflectors.rle</option>
+            <option value="examples/reflectors2.rle">reflectors2.rle</option>
+            <option value="examples/sawtooth177.rle">sawtooth177.rle</option>
+            <option value="examples/short-thin.rle">short-thin.rle</option>
+            <option value="examples/slide-breeder.rle">slide-breeder.rle</option>
+            <option value="examples/slow-salvo-eater-recipes.rle">slow-salvo-eater-recipes.rle</option>
+            <option value="examples/smallest-low-period.rle">smallest-low-period.rle</option>
+            <option value="examples/spacefiller.rle">spacefiller.rle</option>
+            <option value="examples/spaceship-synth-demo.rle">spaceship-synth-demo.rle</option>
+            <option value="examples/spaceship-types.rle">spaceship-types.rle</option>
+            <option value="examples/sphere.rle">sphere.rle</option>
+            <option value="examples/spider-rake.rle">spider-rake.rle</option>
+            <option value="examples/ss-eaters.rle">ss-eaters.rle</option>
+            <option value="examples/stargate.rle">stargate.rle</option>
+            <option value="examples/stripey.rle">stripey.rle</option>
+            <option value="examples/switch-engine-breeder-MR.rle">switch-engine-breeder-MR.rle</option>
+            <option value="examples/switch-engine-breeder.rle">switch-engine-breeder.rle</option>
+            <option value="examples/switch-engine-ping-pong.rle">switch-engine-ping-pong.rle</option>
+            <option value="examples/temp-pulsars-big-s.rle">temp-pulsars-big-s.rle</option>
+            <option value="examples/torus-with-shift.rle">torus-with-shift.rle</option>
+            <option value="examples/torus.rle">torus.rle</option>
+            <option value="examples/totalperiodic.rle">totalperiodic.rle</option>
+            <option value="examples/traffic-light-hasslers.rle">traffic-light-hasslers.rle</option>
+            <option value="examples/traffic-lights-extruder.rle">traffic-lights-extruder.rle</option>
+            <option value="examples/triple-Snark-wick-extruder.rle.rle">triple-Snark-wick-extruder.rle.rle</option>
+            <option value="examples/tubstretch-c124b.rle">tubstretch-c124b.rle</option>
+            <option value="examples/Turing-Machine-3-state.rle">Turing-Machine-3-state.rle</option>
+            <option value="examples/twinprimes.rle">twinprimes.rle</option>
+            <option value="examples/two-glider-collisions.rle">two-glider-collisions.rle</option>
+            <option value="examples/unique-high-period.rle">unique-high-period.rle</option>
+            <option value="examples/Unit-Life-Cell-512x512.rle">Unit-Life-Cell-512x512.rle</option>
+            <option value="examples/Unit-Life-Deep-Cell.rle">Unit-Life-Deep-Cell.rle</option>
+            <option value="examples/unlimited-novelty.rle">unlimited-novelty.rle</option>
+            <option value="examples/vacuum-cleaner.rle">vacuum-cleaner.rle</option>
+            <option value="examples/wicks-DRH-2002.rle">wicks-DRH-2002.rle</option>
+            <option value="examples/zigzag-wickstretcher.rle">zigzag-wickstretcher.rle</option>
         </select>
-        </div>
+       </div>
       </div>
       <div id="canvas-holder">
         <canvas id="game-of-life-canvas"></canvas>
