@@ -21,8 +21,6 @@ var cellCountDisplay = document.getElementById("cell-count");
 var hashCountDisplay = document.getElementById("cached-hash-count");
 var staticHashCountDisplay = document.getElementById("static-hash-count");
 var ageDisplay = document.getElementById("universe-age");
-var speedSelect = document.getElementById("speed-select");
-var fpsSelect = document.getElementById("fps-select");
 var garbageSelect = document.getElementById("garbage-select");
 var filedata = RLE_STR;
 var xyfilecoord = [12,8];
@@ -30,16 +28,34 @@ var inputFileLoader = document.getElementById("rle-file-input");
 var resetBoundingButton = document.getElementById("reset-bounding-box")
 var downloadButton = document.getElementById("download-rle")
 var examplesSelect = document.getElementById("examples-select")
+var play_pause = document.getElementById("play-pause")
 var zoom_level = -1;
 const myWorker = new Worker("worker.js", {type: "module"});
 var last_step_time = 0;
 var needs_render = true;
+var current_speed = 1;
+var current_fps = 4;
+var is_paused = false;
 
 
 const play = "⏵︎";
 const pause = "⏸︎";
-var play_pause = document.getElementById("play-pause")
-
+document.getElementById("decrease-speed").onclick = function(){
+    current_speed = Math.max(current_speed - 1, 1);
+    render();
+}
+document.getElementById("increase-speed").onclick = function(){
+    current_speed = current_speed + 1;
+    render();
+}
+document.getElementById("fast-backwards").onclick = function(){
+    current_fps = Math.max(0, current_fps - 1);
+    render();
+}
+document.getElementById("fast-forwards").onclick = function(){
+    current_fps = Math.min(12, current_fps + 1);
+    render();
+}
 function cellSize(){
     return Math.pow(2, Math.floor((zoom_level < 0 ? -zoom_level : 0)))//cellSizeSelect.value)
 }
@@ -91,12 +107,12 @@ function clearCanvas(){
     ctx.fillRect(0,0,canvas.width,canvas.height);
 }
 const renderLoop = () => {
-    const desired_interval = 1000/Math.pow(2,fpsSelect.value/2.);
+    const desired_interval = 1000/Math.pow(2,current_fps/2.);
     const cur_step_time = new Date().getTime();
-    if (cur_step_time - last_step_time > desired_interval-5){
+    if (!is_paused && cur_step_time - last_step_time > desired_interval-5){
         myWorker.postMessage({
             type: "step_forward",
-            amount: Math.pow(2,speedSelect.value),
+            amount: Math.pow(2,current_speed),
         });
         last_step_time = cur_step_time;
     }
@@ -277,6 +293,18 @@ function onSelectChange(event){
         handleRleUpdate(result);
     })
 }
+function handlePlayPause(event){
+    if (play_pause.innerText == play){
+        play_pause.innerText = pause;
+        is_paused = false;
+    }
+    else{
+        play_pause.innerText = play;
+        is_paused = true;
+    }
+}
+play_pause.onclick = handlePlayPause;
+
 examplesSelect.addEventListener('change',onSelectChange);
 brightnessSelect.addEventListener('change',render);
 resetBoundingButton.addEventListener("click", resetBoundingBox, false);
