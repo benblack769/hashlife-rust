@@ -416,17 +416,18 @@ impl TreeData{
     }
     
     pub fn make_grayscale_map(&self, offset:Point, xsize: usize, ysize: usize, zoom: u8, brightness: f64) -> Vec<u8> {
+        assert!(zoom >= 0);
         let mut res: Vec<u8> = Vec::new();
         res.resize(xsize*ysize, 0);
         const B2: u8 = 16;
         let brightness_int = (brightness * (1<<B2) as f64) as u64;
         self.iter_grayscale_points(self.root, self.depth as i64, offset.neg() + self.offset, &mut|depth,p,count|{
-            let magnitude:i64 = 1<<(depth+3);
-            let t = p.div(magnitude);
+            let relmag:i64 = 1<<(depth+3 - zoom as i64);
+            let t = p.div(1<<zoom);
             if count == 0{
                 false
             }
-            else if t.x >= xsize as i64 || t.y >= ysize as i64 || t.x+1 <= 0 || t.y + 1 <= 0{
+            else if t.x >= xsize as i64 || t.y >= ysize as i64 || t.x + relmag <= 0 || t.y + relmag <= 0{
                 false
             }
             else if zoom as i64 >= depth+3{
