@@ -38,8 +38,6 @@ var current_fps = 4;
 var is_paused = false;
 
 
-const play = "⏵︎";
-const pause = "⏸︎";
 document.getElementById("decrease-speed").onclick = function(){
     current_speed = Math.max(current_speed - 1, 1);
     render();
@@ -294,12 +292,12 @@ function onSelectChange(event){
     })
 }
 function handlePlayPause(event){
-    if (play_pause.innerText == play){
-        play_pause.innerText = pause;
+    if (is_paused){
+        play_pause.innerHTML = '<i class="material-icons">pause</i>';
         is_paused = false;
     }
     else{
-        play_pause.innerText = play;
+        play_pause.innerHTML = '<i class="material-icons">play_arrow</i>';
         is_paused = true;
     }
 }
