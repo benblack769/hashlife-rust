@@ -33,6 +33,14 @@
         background-color: rgba(255,255,255,0.2);
         z-index: 1;
       }
+      #stats-display{
+        position: absolute;
+        color: white;
+        top: 0;
+        right: 0;
+        background-color: rgba(255,255,255,0.2);
+        z-index: 1;
+      }
       #button-holder{
         position: absolute;
         width: 20em;
@@ -89,7 +97,7 @@
     <body>
       <div id="gol-options">
         <div>
-          <span>Garbage collection</span>
+          <span>Memory limit</span>
           <input id="garbage-select" type="range" min="18" max="30" value="22" class="slider">
         </div>
         <div>
@@ -97,30 +105,11 @@
           <input id="brightness-select" type="range" min="0" max="64" value="0" class="slider">
         </div>
         <div>
-          Live cells:
-          <span id="cell-count"></span>
-        </div>
-        <div>
-          Age:
-          <span id="universe-age"></span>
-        </div>
-        <div>
-          Cached hash count:
-          <span id="cached-hash-count"></span>
-        </div>
-        <div>
-          Static hash count:
-          <span id="static-hash-count"></span>
-        </div>
-        <div>
           <span>Load file</span>
           <input id="rle-file-input" type="file">
         </div>
         <div>
-          <button id="reset-bounding-box">Home</button>
-        </div>
-        <div>
-          <button id="download-rle">Download</button>
+          <button id="reset-bounding-box">Zoom to origin</button>
         </div>
         <div>
           Select builtin pattern
@@ -138,6 +127,47 @@
             <option value="examples/temp-pulsars-big-s.rle">temp-pulsars-big-s.rle</option>
         </select>
        </div>
+       <div>
+         <button id="download-rle">Download</button>
+       </div>
+      </div>
+      <div id="stats-display">
+        <div>
+          Live cells:
+          <span id="cell-count"></span>
+        </div>
+        <div>
+          Age:
+          <span id="universe-age"></span>
+        </div>
+        <div>
+          Cached hash count:
+          <span id="cached-hash-count"></span>
+        </div>
+        <div>
+          Static hash count:
+          <span id="static-hash-count"></span>
+        </div>
+        <div>
+          Max memory usage:
+          <span id="max-memory-display"></span>MB
+        </div>
+        <div>
+          Brightness:
+          <span id="brightness-display"></span>
+        </div>
+        <div>
+          Steps per frame:
+          <span id="steps-per-frame"></span>
+        </div>
+        <div>
+          Max frames per second:
+          <span id="frames-per-second"></span>
+        </div>
+        <div>
+          Cells per pixel:
+          <span id="zoom-ratio"></span>
+        </div>
       </div>
       <div id="canvas-holder">
         <canvas id="game-of-life-canvas"></canvas>

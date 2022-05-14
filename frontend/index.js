@@ -17,10 +17,6 @@ var ysize = window.innerHeight;
 var xstart = 0;
 var ystart = 0;
 var brightnessSelect = document.getElementById("brightness-select");
-var cellCountDisplay = document.getElementById("cell-count");
-var hashCountDisplay = document.getElementById("cached-hash-count");
-var staticHashCountDisplay = document.getElementById("static-hash-count");
-var ageDisplay = document.getElementById("universe-age");
 var garbageSelect = document.getElementById("garbage-select");
 var filedata = RLE_STR;
 var xyfilecoord = [12,8];
@@ -69,6 +65,9 @@ function brightness(){
 function roundToCell(size){
     return Math.ceil(size/cellSize())*cellSize()
 }
+function garbageLimit(){
+    return Math.pow(2,garbageSelect.value)
+}
 function actualRender(){
     requestAnimationFrame(actualRender);
     if (!needs_render){
@@ -89,10 +88,16 @@ function actualRender(){
     const canvasContext = canvas.getContext("2d");
     canvasContext.imageSmoothingEnabled = false;
     canvasContext.putImageData(img_data, 0, 0);
-    cellCountDisplay.innerText = tree.num_live_cells();
-    staticHashCountDisplay.innerText = tree.hash_count();
-    hashCountDisplay.innerText = workerhashcount;
-    ageDisplay.innerText = tree.get_age();
+
+    document.getElementById("cell-count").innerText = tree.num_live_cells();
+    document.getElementById("cached-hash-count").innerText = workerhashcount;
+    document.getElementById("static-hash-count").innerText = tree.hash_count();
+    document.getElementById("universe-age").innerText = tree.get_age();
+    document.getElementById("max-memory-display").innerText = garbageLimit()*(112+8*3)/Math.pow(2,20);
+    document.getElementById("brightness-display").innerText = Math.round(100*brightness())/100;
+    document.getElementById("steps-per-frame").innerText = Math.pow(2,current_speed);
+    document.getElementById("frames-per-second").innerText = Math.round(100*Math.pow(2,current_fps/2.))/100;
+    document.getElementById("zoom-ratio").innerText = zoomScale();
 }
 function render(){
     needs_render = true;
@@ -121,7 +126,7 @@ const renderLoop = () => {
 
 function bound_zoom(zoom_level){
     zoom_level = Math.max(zoom_level, -5);
-    zoom_level = Math.min(zoom_level, 12);
+    zoom_level = Math.min(zoom_level, 15);
     return zoom_level;
 }
 function handle_wheel(event){
@@ -147,6 +152,9 @@ function handleRleUpdate(filedata){
     tree = TreeDataWrapper.make_from_rle(filedata);
     parseBoundingBox(filedata)
     resetBoundingBox()
+    current_speed = 1;
+    current_fps = 4;
+    render();
 }
 function handleFileUpload() {
     clearCanvas();
@@ -181,6 +189,7 @@ function resetBoundingBox(){
     xstart = filex / 2 - xcen;
     ystart = filey / 2 - ycen;
     brightnessSelect.value = Math.max(1,Math.floor(zoom_level)*4)
+    render()
 }
 function downloadText(text, filename){
   var element = document.createElement('a');
@@ -229,7 +238,7 @@ function handleWebWorker(e){
 function handleGarbageSelect(e){
     myWorker.postMessage({
         type: "set_garbage_limit",
-        amount: Math.pow(2,garbageSelect.value),
+        amount: garbageLimit(),
     })
 }
 var is_mouse_down = false;
