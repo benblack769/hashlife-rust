@@ -29,13 +29,13 @@ var zoom_level = -1;
 const myWorker = new Worker("worker.js", {type: "module"});
 var last_step_time = 0;
 var needs_render = true;
-var current_speed = 1;
+var current_speed = 0;
 var current_fps = 4;
 var is_paused = false;
 
 
 document.getElementById("decrease-speed").onclick = function(){
-    current_speed = Math.max(current_speed - 1, 1);
+    current_speed = Math.max(current_speed - 1, 0);
     render();
 }
 document.getElementById("increase-speed").onclick = function(){
@@ -97,7 +97,7 @@ function actualRender(){
     document.getElementById("brightness-display").innerText = Math.round(100*brightness())/100;
     document.getElementById("steps-per-frame").innerText = Math.pow(2,current_speed);
     document.getElementById("frames-per-second").innerText = Math.round(100*Math.pow(2,current_fps/2.))/100;
-    document.getElementById("zoom-ratio").innerText = zoomScale();
+    document.getElementById("zoom-ratio").innerText = Math.pow(zoomScale(),2);
 }
 function render(){
     needs_render = true;
@@ -152,7 +152,7 @@ function handleRleUpdate(filedata){
     tree = TreeDataWrapper.make_from_rle(filedata);
     parseBoundingBox(filedata)
     resetBoundingBox()
-    current_speed = 1;
+    current_speed = 0;
     current_fps = 4;
     render();
 }
