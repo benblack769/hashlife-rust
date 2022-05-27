@@ -29,37 +29,32 @@ fn save_png(fname:&str, xsize: usize, ysize: usize, data: &[u8]){
 fn main() {
     let args: Vec<String> = env::args().collect();
     println!("{:?}\n\n", args);
-    assert!(args.len() == 4);
+    assert!(args.len() == 5, "needs 4 argument, in_filename, n_steps, steps_per_frame_pow2, out_filename");
     let in_filename = &args[1];
-    let n_steps = args[2].parse::<u64>().unwrap();
-    // let n_steps = args[2].parse::<u64>().unwrap();
-    let out_filename = &args[3];
+    let n_frames = args[2].parse::<u64>().unwrap();
+    let steps_per_frame = 1<<args[3].parse::<u64>().unwrap();
+    let out_filename = &args[4];
 
     let contents = fs::read_to_string(in_filename).unwrap();
     let points = parse_fle_file(&contents);
     let start_time = Instant::now();
     let mut tree = TreeData::gather_all_points(&points);
     println!("finished gathering");
-    let MAX_STEPS = 1<<9;
-    let mut step_n = 0;
-    let mut frame = 0;
-    let xsize = 800;
-    let ysize = 800;
-    while step_n < n_steps{
-        let cur_steps = std::cmp::min(n_steps - step_n, MAX_STEPS);
-        tree.step_forward(cur_steps);
-        if tree.hash_count() > 15000000{
+    let xsize = 1200;
+    let ysize = 1200;
+    for frame in 0..n_frames{
+        tree.step_forward(steps_per_frame);
+        if tree.hash_count() > 30000000{
             let bef_garbage_tree_size = tree.hash_count();
             tree = tree.pruned_tree();
             let aft_garbage_tree_size = tree.hash_count();
             println!("Garbage collected, Bef: {},\t Aft: {}",bef_garbage_tree_size,aft_garbage_tree_size);
         }
-        step_n += cur_steps;
+        let step_n = frame * steps_per_frame;
         let t = start_time.elapsed().as_secs_f64();
         println!("reached step {} at time {} (avg {}) hash size {}",step_n,t,t/step_n as f64, tree.hash_count());
-        let fname = format!("frames/step{:03}.png", frame);
-        save_png(fname.as_str(),xsize,ysize,&tree.make_grayscale_map(Point{x:0,y:0}, xsize, ysize, 7, 2006.)[..]);
-        frame += 1;
+        let fname = format!("frames/step{:08}.png", step_n);
+        save_png(fname.as_str(),xsize,ysize,&tree.make_grayscale_map(Point{x:-1000,y:-8000}, xsize, ysize, 4, 2006.)[..]);
     }
     println!("finished stepping");
     let out_points = tree.dump_all_points();
