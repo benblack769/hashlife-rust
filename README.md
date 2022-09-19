@@ -12,4 +12,4 @@ There are three properties of this system which are very useful for efficient si
 2. The particles values are discrete. This means we can used a hard hash to memoize the results, essentially a trivial machine learning method.
 3. The "speed of light", i.e. the fastest that information can travel, is known and quite slow. This means we do not need to make any assumptions when partioning or building abstractions, out results will be exact.
 
-![](docs/checkerboard.svg)
+![](docs/checkerboard.gif)

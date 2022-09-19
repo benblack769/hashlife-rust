@@ -45,7 +45,7 @@ def draw_board(dwg, group, pos, step):
     # subseg = dwg.add(dwg.g(class_="subseg"))
     # subred = dwg.add(dwg.g(class_="subred"))
     # group = dwg.add(dwg.g())
-    
+
     x,y = pos
     # draw squares
     astep = 1-step
@@ -62,7 +62,7 @@ def draw_board(dwg, group, pos, step):
         group.add(dwg.line(start=(0, y), end=(80, y),class_="line"))
         x = i * 10
         group.add(dwg.line(start=(x, 0), end=(x, 80),class_="line"))
-        
+
 
 def make_css():
     n_svgs = 13
@@ -123,12 +123,12 @@ def main():
 
     # always use css for styling
     dwg.defs.add(dwg.style(make_css()))
-    
+
     # set background
 
     grouper = dwg.add(dwg.g(id="cf4a"))
     gsteps = []
-    
+
     idx = 0
     for y in range(0,6,2):
         for x in range(0,6,2):
