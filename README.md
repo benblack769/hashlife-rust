@@ -5,7 +5,7 @@ Awhile ago, I wanted to play around with web-centric computing using webassembly
 The app looks like this (<a href="https://benblack769.github.io/hashlife-rust/" target="_blank" rel="noopener noreferrer">click to go to deployed demo</a>):
 
 <a href="https://benblack769.github.io/hashlife-rust/" target="_blank" rel="noopener noreferrer">
-![screenshot](./docs/full_app_screenshot.png)
+<img src="./docs/full_app_screenshot.png" alt="full_app_screenshot"/>
 </a>
 
 To test the full power of the hashlife algorithm, I would recommend:
