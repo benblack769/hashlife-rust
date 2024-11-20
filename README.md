@@ -33,3 +33,28 @@ Note that the dots coming out of the machine correspond one to one with the twin
 * It is fun to implement an algorithm like this without frameworks
 
 
+### Development
+
+While this repo is not looking for any contributions and is feature frozen, if you want to fork it and add your own cool features, here is how to build it.
+
+#### Install dependencies
+
+1. Install [`cargo`](https://www.rust-lang.org/tools/install) (rust build tools)
+2. Install [`wasm-pack`](https://github.com/rustwasm/wasm-pack) (rust-wasm interface builder)
+
+#### Build
+
+```
+cd wasm-hashlife
+wasm-pack build --release --target web
+cd ..
+cp wasm-hashlife/pkg/wasm_hashlife* frontend/
+```
+
+#### View locally
+
+```
+cd frontend
+python -m http.server
+```
+View on [http://localhost:8000/](http://localhost:8000/). Enjoy!

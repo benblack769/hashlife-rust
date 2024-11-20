@@ -1,4 +1,4 @@
-import init, { paniky, set_panic_hook_js, ExampleStruct, TreeDataWrapper } from './wasm_hashlife_bg.js';
+import init, { paniky, set_panic_hook_js, ExampleStruct, TreeDataWrapper } from './wasm_hashlife.js';
 
 async function run() {
     await init();
